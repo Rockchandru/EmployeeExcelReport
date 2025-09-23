@@ -16,6 +16,9 @@ public class EmployeeSwipe {
     @Column(name = "id")
     private Integer id;
 
+    @Column(name = "sno")
+    private Integer sNo;
+    
     @Column(name = "employee_no")
     private String employeeId;
 
@@ -42,8 +45,13 @@ public class EmployeeSwipe {
     public void setId(Integer id) {
         this.id = id;
     }
-
-    public String getEmployeeId() {
+    public Integer getsNo() {
+		return sNo;
+	}
+	public void setsNo(Integer sNo) {
+		this.sNo = sNo;
+	}
+	public String getEmployeeId() {
         return employeeId;
     }
     public void setEmployeeId(String employeeId) {
@@ -77,12 +85,14 @@ public class EmployeeSwipe {
     public void setSwipeTime(LocalDateTime swipeTime) {
         this.swipeTime = swipeTime;
     }
+    
+	@Override
+	public String toString() {
+		return "EmployeeSwipe [id=" + id + ", sNo=" + sNo + ", employeeId=" + employeeId + ", employeeName="
+				+ employeeName + ", designation=" + designation + ", floor=" + floor + ", swipeTime=" + swipeTime + "]";
+	}
 
-    @Override
-    public String toString() {
-        return "EmployeeSwipe [id=" + id + ", employeeId=" + employeeId + ", employeeName=" + employeeName
-                + ", designation=" + designation + ", floor=" + floor + ", swipeTime=" + swipeTime + "]";
-    }
+    
 }
 
 

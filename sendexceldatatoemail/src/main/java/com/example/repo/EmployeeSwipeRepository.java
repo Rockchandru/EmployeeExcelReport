@@ -15,6 +15,7 @@ public interface EmployeeSwipeRepository extends JpaRepository<EmployeeSwipe, In
 
     @Query("""
         SELECT new com.example.dto.EmployeeFloorSummary(
+    		e.sNo,
             e.employeeId,
             e.employeeName,
             e.designation,
@@ -26,7 +27,7 @@ public interface EmployeeSwipeRepository extends JpaRepository<EmployeeSwipe, In
         )
         FROM EmployeeSwipe e
         WHERE e.swipeTime BETWEEN :start AND :end
-        GROUP BY e.employeeId, e.employeeName, e.designation
+        GROUP BY e.sNo, e.employeeId, e.employeeName, e.designation
     """)
     List<EmployeeFloorSummary> getDailyFloorSummary(@Param("start") LocalDateTime start,
                                                     @Param("end") LocalDateTime end);

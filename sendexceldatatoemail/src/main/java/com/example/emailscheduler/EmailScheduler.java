@@ -27,7 +27,7 @@ public class EmailScheduler {
     
     //@Scheduled(cron = "0 0 19 * * ?") // Runs every day at 7:00 PM
     
-    @Scheduled(cron = "0 54 02 * * ?") // Runs every day at 7:40 PM
+    @Scheduled(cron = "0 18 08 * * ?") // Runs every day at 7:40 PM
 
     public void sendExcelMail() {
         try {
