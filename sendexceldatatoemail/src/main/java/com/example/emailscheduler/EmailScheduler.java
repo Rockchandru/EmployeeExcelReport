@@ -23,11 +23,11 @@ public class EmailScheduler {
     @Autowired
     private ExcelReportGenerator excelGenerator;
 
-  //  @Scheduled(cron = "0 0 15 * * ?") // Runs daily at 3 PM
+  //@Scheduled(cron = "0 0 15 * * ?") // Runs daily at 3 PM
     
     //@Scheduled(cron = "0 0 19 * * ?") // Runs every day at 7:00 PM
     
-    @Scheduled(cron = "0 18 08 * * ?") // Runs every day at 7:40 PM
+    @Scheduled(cron = "0 31 14 * * ?") // Runs every day at 7:40 PM
 
     public void sendExcelMail() {
         try {

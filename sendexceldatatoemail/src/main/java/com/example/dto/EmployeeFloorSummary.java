@@ -3,7 +3,7 @@ package com.example.dto;
 public class EmployeeFloorSummary {
 
 	private Integer sNo;
-    private String employeeId; // ✅ Changed from Long to String
+    private String employeeId; // Changed from Long to String
     private String employeeName;
     private String designation;
     private Long floorA;
@@ -13,7 +13,7 @@ public class EmployeeFloorSummary {
     private Long floorE;
     private Long total;
 
-    // ✅ Constructor used in JPQL projection
+    //  Constructor used in JPQL projection
     public EmployeeFloorSummary(Integer sNo, String employeeId, String employeeName, String designation,
                                 Long floorA, Long floorB, Long floorC, Long floorD, Long floorE) {
     	this.sNo = sNo;
@@ -28,7 +28,7 @@ public class EmployeeFloorSummary {
         this.total = this.floorA + this.floorB + this.floorC + this.floorD + this.floorE;
     }
 
-	// ✅ Getters and Setters
+	// Getters and Setters
     public Integer getsNo() {
 		return sNo;
 	}

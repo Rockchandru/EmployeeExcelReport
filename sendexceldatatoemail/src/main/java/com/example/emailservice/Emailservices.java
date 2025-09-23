@@ -1,8 +1,4 @@
 package com.example.emailservice;
-
-
-
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.javamail.*;
 import org.springframework.stereotype.Service;
