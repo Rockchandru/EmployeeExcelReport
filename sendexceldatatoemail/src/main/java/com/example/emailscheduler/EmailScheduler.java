@@ -23,44 +23,42 @@ public class EmailScheduler {
     @Autowired
     private ExcelReportGenerator excelGenerator;
 
-  //@Scheduled(cron = "0 0 15 * * ?") // Runs daily at 3 PM
     
-    //@Scheduled(cron = "0 0 19 * * ?") // Runs every day at 7:00 PM
-    
-    @Scheduled(cron = "0 31 14 * * ?") // Runs every day at 7:40 PM
+    @Scheduled(cron = "0 33 17 * * ?") // Runs every day at 7:40 PM
 
     public void sendExcelMail() {
-        try {
-            //LocalDateTime start = LocalDate.now().atStartOfDay();
-            //LocalDateTime end = start.plusDays(1);
-        	LocalDateTime start = LocalDateTime.of(2025, 9, 21, 0, 0);
-        	LocalDateTime end = LocalDateTime.of(2025, 9, 21, 23, 59);
+    	try {
+    		//LocalDateTime start = LocalDate.now().atStartOfDay();
+    		//LocalDateTime end = start.plusDays(1);
+    		LocalDateTime start = LocalDateTime.of(2025,7, 18, 0, 0);
+    		LocalDateTime end = LocalDateTime.of(2025,7, 19, 0, 0);
 
-            List<EmployeeFloorSummary> summaries = repository.getDailyFloorSummary(start, end);
-            if (summaries.isEmpty()) {
-                System.out.println("⚠️ No swipe data found for today.");
-                return;
-            }
 
-            byte[] report = excelGenerator.generateFloorReport(summaries);
+    		List<EmployeeFloorSummary> summaries = repository.getDailyFloorSummary(start, end);
+    		if (summaries.isEmpty()) {
+    			System.out.println("⚠️ No swipe data found for today.");
+    			return;
+    		}
 
-            String[] recipients = {
-                "chandrutvm13@gmail.com",
-                "haiiucedu@gmail.com"
-            };
+    		byte[] report = excelGenerator.generateFloorReport(summaries);
 
-            emailService.sendEmailWithAttachment(
-                recipients,
-                "Daily Floor Swipe Summary",
-                "Please find the attached Excel report.",
-                report
-            );
+    		String[] recipients = {
+    				"rpprem04@gmail.com",
+    				"haiiucedu@gmail.com"
+    		};
 
-            System.out.println("📤 Scheduled email sent.");
-        } catch (Exception e) {
-            System.out.println("❌ Scheduler error: " + e.getMessage());
-            e.printStackTrace();
-        }
+    		emailService.sendEmailWithAttachment(
+    				recipients,
+    				"Daily Floor Swipe Summary",
+    				"Please find the attached Excel report.",
+    				report
+    				);
+
+    		System.out.println("📤 Scheduled email sent.");
+    	} catch (Exception e) {
+    		System.out.println("❌ Scheduler error: " + e.getMessage());
+    		e.printStackTrace();
+    	}
     }
 }
 

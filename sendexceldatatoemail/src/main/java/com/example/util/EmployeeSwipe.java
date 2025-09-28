@@ -8,7 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "employee_swipe")
+@Table(name = "Main")
 public class EmployeeSwipe {
 
     @Id
@@ -34,8 +34,6 @@ public class EmployeeSwipe {
     @Column(name = "time_of_sheet_update")
     private LocalDateTime swipeTime;
 
-    
-    
     
     // Getters and Setters
 

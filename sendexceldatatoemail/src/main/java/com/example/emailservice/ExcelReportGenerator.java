@@ -1,15 +1,12 @@
 package com.example.emailservice;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
-
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.*;
 import org.springframework.stereotype.Component;
-
 import com.example.dto.EmployeeFloorSummary;
 
 @Component
@@ -42,7 +39,7 @@ public class ExcelReportGenerator {
 
         //  Header row
         int rowNum = 0;
-        String[] columns = {"S_No", "Employee ID", "Name", "Designation", "Floor A", "Floor B", "Floor C", "Floor D", "Floor E", "Total"};
+        String[] columns = {"S_No", "Employee ID", "Name", "Designation", "Floor F1", "Floor F2", "Floor F3", "Floor F4", "Floor F5","Floor F6","Floor F7","Floor B", "Total"};
         Row header = sheet.createRow(rowNum++);
         for (int i = 0; i < columns.length; i++) {
             XSSFCell cell = (XSSFCell) header.createCell(i);
@@ -52,23 +49,23 @@ public class ExcelReportGenerator {
 
         //  Sort summaries by total (ascending)
         summaries.sort((a, b) -> {
-            long totalA = a.getFloorA() + a.getFloorB() + a.getFloorC() + a.getFloorD() + a.getFloorE();
-            long totalB = b.getFloorA() + b.getFloorB() + b.getFloorC() + b.getFloorD() + b.getFloorE();
+            long totalA = a.getFloorF1() + a.getFloorF2() + a.getFloorF3() + a.getFloorF4() + a.getFloorF5() +a.getFloorF6() +a.getFloorF7() +a.getFloorB();
+            long totalB = b.getFloorF1() + b.getFloorF2() + b.getFloorF3() + b.getFloorF4() + b.getFloorF5() +a.getFloorF6() +a.getFloorF7() +a.getFloorB();
             return Long.compare(totalA, totalB);
         });
 
         // Data rows
         for (EmployeeFloorSummary summary : summaries) {
             Row row = sheet.createRow(rowNum++);
-            long total = summary.getFloorA() + summary.getFloorB() + summary.getFloorC()
-                       + summary.getFloorD() + summary.getFloorE();
+            long total = summary.getFloorF1() + summary.getFloorF2() + summary.getFloorF3()
+                       + summary.getFloorF4() + summary.getFloorF5()+summary.getFloorF6() +summary.getFloorF7() +summary.getFloorB();
             
             grandTotal =grandTotal + total;
 
             Object[] values = {
                 summary.getsNo(), summary.getEmployeeId(), summary.getEmployeeName(), summary.getDesignation(),
-                summary.getFloorA(), summary.getFloorB(), summary.getFloorC(),
-                summary.getFloorD(), summary.getFloorE(), total
+                summary.getFloorF1(), summary.getFloorF2(), summary.getFloorF3(),
+                summary.getFloorF4(), summary.getFloorF5(),summary.getFloorF6(),summary.getFloorF7(),summary.getFloorB(), total
             };
 
             for (int i = 0; i < values.length; i++) {

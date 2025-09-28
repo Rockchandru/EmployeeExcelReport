@@ -6,105 +6,138 @@ public class EmployeeFloorSummary {
     private String employeeId; // Changed from Long to String
     private String employeeName;
     private String designation;
-    private Long floorA;
+    private Long floorF1;
+    private Long floorF2;
+    private Long floorF3;
+    private Long floorF4;
+    private Long floorF5;
+    private Long floorF6;
+    private Long floorF7;
     private Long floorB;
-    private Long floorC;
-    private Long floorD;
-    private Long floorE;
     private Long total;
 
-    //  Constructor used in JPQL projection
-    public EmployeeFloorSummary(Integer sNo, String employeeId, String employeeName, String designation,
-                                Long floorA, Long floorB, Long floorC, Long floorD, Long floorE) {
-    	this.sNo = sNo;
-        this.employeeId = employeeId;
-        this.employeeName = employeeName;
-        this.designation = designation;
-        this.floorA = floorA != null ? floorA : 0;
-        this.floorB = floorB != null ? floorB : 0;
-        this.floorC = floorC != null ? floorC : 0;
-        this.floorD = floorD != null ? floorD : 0;
-        this.floorE = floorE != null ? floorE : 0;
-        this.total = this.floorA + this.floorB + this.floorC + this.floorD + this.floorE;
-    }
+   	public EmployeeFloorSummary(Integer sNo, String employeeId, String employeeName, String designation, Long floorF1,
+			Long floorF2, Long floorF3, Long floorF4, Long floorF5, Long floorF6, Long floorF7, Long floorB) {
+		super();
+		this.sNo = sNo;
+		this.employeeId = employeeId;
+		this.employeeName = employeeName;
+		this.designation = designation;
+		this.floorF1 = floorF1 != null ? floorF1: 0;
+		this.floorF2 = floorF2 != null ? floorF2: 0;
+		this.floorF3 = floorF3 != null ? floorF3: 0;
+		this.floorF4 = floorF4 != null ? floorF4: 0;
+		this.floorF5 = floorF5 != null ? floorF5: 0;
+		this.floorF6 = floorF6 != null ? floorF6: 0;
+		this.floorF7 = floorF7 != null ? floorF7: 0;
+		this.floorB = floorB != null ? floorB: 0;
+		this.total = this.floorF1 + this.floorF2 + this.floorF3 + this.floorF4 + this.floorF5 + this.floorF6 + this.floorF7 + this.floorB;
+	}
 
-	// Getters and Setters
-    public Integer getsNo() {
+	public Integer getsNo() {
 		return sNo;
 	}
+
 	public void setsNo(Integer sNo) {
 		this.sNo = sNo;
 	}
-    public String getEmployeeId() {
-        return employeeId;
-    }
 
-    public void setEmployeeId(String employeeId) {
-        this.employeeId = employeeId;
-    }
+	public String getEmployeeId() {
+		return employeeId;
+	}
 
-    public String getEmployeeName() {
-        return employeeName;
-    }
+	public void setEmployeeId(String employeeId) {
+		this.employeeId = employeeId;
+	}
 
-    public void setEmployeeName(String employeeName) {
-        this.employeeName = employeeName;
-    }
+	public String getEmployeeName() {
+		return employeeName;
+	}
 
-    public String getDesignation() {
-        return designation;
-    }
+	public void setEmployeeName(String employeeName) {
+		this.employeeName = employeeName;
+	}
 
-    public void setDesignation(String designation) {
-        this.designation = designation;
-    }
+	public String getDesignation() {
+		return designation;
+	}
 
-    public Long getFloorA() {
-        return floorA;
-    }
+	public void setDesignation(String designation) {
+		this.designation = designation;
+	}
 
-    public void setFloorA(Long floorA) {
-        this.floorA = floorA;
-    }
+	public Long getFloorF1() {
+		return floorF1;
+	}
 
-    public Long getFloorB() {
-        return floorB;
-    }
+	public void setFloorF1(Long floorF1) {
+		this.floorF1 = floorF1;
+	}
 
-    public void setFloorB(Long floorB) {
-        this.floorB = floorB;
-    }
+	public Long getFloorF2() {
+		return floorF2;
+	}
 
-    public Long getFloorC() {
-        return floorC;
-    }
+	public void setFloorF2(Long floorF2) {
+		this.floorF2 = floorF2;
+	}
 
-    public void setFloorC(Long floorC) {
-        this.floorC = floorC;
-    }
+	public Long getFloorF3() {
+		return floorF3;
+	}
 
-    public Long getFloorD() {
-        return floorD;
-    }
+	public void setFloorF3(Long floorF3) {
+		this.floorF3 = floorF3;
+	}
 
-    public void setFloorD(Long floorD) {
-        this.floorD = floorD;
-    }
+	public Long getFloorF4() {
+		return floorF4;
+	}
 
-    public Long getFloorE() {
-        return floorE;
-    }
+	public void setFloorF4(Long floorF4) {
+		this.floorF4 = floorF4;
+	}
 
-    public void setFloorE(Long floorE) {
-        this.floorE = floorE;
-    }
+	public Long getFloorF5() {
+		return floorF5;
+	}
 
-    public Long getTotal() {
-        return total;
-    }
+	public void setFloorF5(Long floorF5) {
+		this.floorF5 = floorF5;
+	}
 
-    public void setTotal(Long total) {
-        this.total = total;
-    }
+	public Long getFloorF6() {
+		return floorF6;
+	}
+
+	public void setFloorF6(Long floorF6) {
+		this.floorF6 = floorF6;
+	}
+
+	public Long getFloorF7() {
+		return floorF7;
+	}
+
+	public void setFloorF7(Long floorF7) {
+		this.floorF7 = floorF7;
+	}
+
+	public Long getFloorB() {
+		return floorB;
+	}
+
+	public void setFloorB(Long floorB) {
+		this.floorB = floorB;
+	}
+
+	public Long getTotal() {
+		return total;
+	}
+
+	public void setTotal(Long total) {
+		this.total = total;
+	}
+
+	
 }
 

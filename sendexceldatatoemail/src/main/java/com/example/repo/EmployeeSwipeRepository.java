@@ -13,37 +13,29 @@ import com.example.util.EmployeeSwipe;
 @Repository
 public interface EmployeeSwipeRepository extends JpaRepository<EmployeeSwipe, Integer> {
 
-    @Query("""
-        SELECT new com.example.dto.EmployeeFloorSummary(
-    		e.sNo,
-            e.employeeId,
-            e.employeeName,
-            e.designation,
-            SUM(CASE WHEN e.floor = 'A' THEN 1 ELSE 0 END),
-            SUM(CASE WHEN e.floor = 'B' THEN 1 ELSE 0 END),
-            SUM(CASE WHEN e.floor = 'C' THEN 1 ELSE 0 END),
-            SUM(CASE WHEN e.floor = 'D' THEN 1 ELSE 0 END),
-            SUM(CASE WHEN e.floor = 'E' THEN 1 ELSE 0 END)
-        )
-        FROM EmployeeSwipe e
-        WHERE e.swipeTime BETWEEN :start AND :end
-        GROUP BY e.sNo, e.employeeId, e.employeeName, e.designation
-    """)
-    List<EmployeeFloorSummary> getDailyFloorSummary(@Param("start") LocalDateTime start,
-                                                    @Param("end") LocalDateTime end);
+	@Query("""
+		    SELECT new com.example.dto.EmployeeFloorSummary(
+			    MIN(e.sNo),
+		        e.employeeId,
+		        e.employeeName,
+		        e.designation,
+		        SUM(CASE WHEN UPPER(TRIM(e.floor)) = 'F1' THEN 1 ELSE 0 END),
+		        SUM(CASE WHEN UPPER(TRIM(e.floor)) = 'F2' THEN 1 ELSE 0 END),
+		        SUM(CASE WHEN UPPER(TRIM(e.floor)) = 'F3' THEN 1 ELSE 0 END),
+		        SUM(CASE WHEN UPPER(TRIM(e.floor)) = 'F4' THEN 1 ELSE 0 END),
+		        SUM(CASE WHEN UPPER(TRIM(e.floor)) = 'F5' THEN 1 ELSE 0 END),
+		        SUM(CASE WHEN UPPER(TRIM(e.floor)) = 'F6' THEN 1 ELSE 0 END),
+		        SUM(CASE WHEN UPPER(TRIM(e.floor)) = 'F7' THEN 1 ELSE 0 END),
+		        SUM(CASE WHEN UPPER(TRIM(e.floor)) = 'B' THEN 1 ELSE 0 END)
+		    )
+		    FROM EmployeeSwipe e
+		    WHERE e.swipeTime BETWEEN :start AND :end
+		    GROUP BY e.employeeId, e.employeeName, e.designation
+		""")
+		List<EmployeeFloorSummary> getDailyFloorSummary(@Param("start") LocalDateTime start,
+		                                                @Param("end") LocalDateTime end);
+
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -28,8 +28,8 @@ public class Maincontroller {
         try {
             //LocalDateTime start = LocalDate.now().atStartOfDay();
             //LocalDateTime end = start.plusDays(1);
-            LocalDateTime start = LocalDateTime.of(2025, 9, 21, 0, 0);
-        	LocalDateTime end = LocalDateTime.of(2025, 9, 21, 23, 59);
+            LocalDateTime start = LocalDateTime.of(2025, 9, 22, 0, 0);
+        	LocalDateTime end = LocalDateTime.of(2025, 9, 23, 0, 0);
 
             List<EmployeeFloorSummary> summaries = repository.getDailyFloorSummary(start, end);
             if (summaries.isEmpty()) {
@@ -39,13 +39,13 @@ public class Maincontroller {
             byte[] report = excelGenerator.generateFloorReport(summaries);
 
             String[] recipients = {
-                "chandrutvm13@gmail.com",
+                "rpprem04@gmail.com",
                 "haiiucedu@gmail.com"
             };
 
             emailService.sendEmailWithAttachment(
                 recipients,
-                "Manual Excel Report",
+                "Floor summary report",
                 "Please find the attached Excel file.",
                 report
             );
