@@ -1,15 +1,16 @@
 package com.example.emailscheduler;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
 import com.example.dto.EmployeeFloorSummary;
 import com.example.emailservice.Emailservices;
 import com.example.emailservice.ExcelReportGenerator;
 import com.example.repo.EmployeeSwipeRepository;
+
 
 @Component
 public class EmailScheduler {
@@ -23,15 +24,19 @@ public class EmailScheduler {
     @Autowired
     private ExcelReportGenerator excelGenerator;
 
+	
+	  @Value("${send.recipient1}") private String recipient1;
+	  @Value("${send.recipient2}") private String recipient2;
+	 
     
-    @Scheduled(cron = "0 33 17 * * ?") // Runs every day at 7:40 PM
+    @Scheduled(cron = "${send.email.expression}") // Runs every day at 7:40 PM
 
     public void sendExcelMail() {
     	try {
-    		//LocalDateTime start = LocalDate.now().atStartOfDay();
-    		//LocalDateTime end = start.plusDays(1);
-    		LocalDateTime start = LocalDateTime.of(2025,7, 18, 0, 0);
-    		LocalDateTime end = LocalDateTime.of(2025,7, 19, 0, 0);
+    		LocalDateTime start = LocalDate.now().atStartOfDay();
+    		LocalDateTime end = start.plusDays(1);
+    		//LocalDateTime start = LocalDateTime.of(2025,7, 18, 0, 0);
+    		//LocalDateTime end = LocalDateTime.of(2025,7, 19, 0, 0);
 
 
     		List<EmployeeFloorSummary> summaries = repository.getDailyFloorSummary(start, end);
@@ -43,8 +48,8 @@ public class EmailScheduler {
     		byte[] report = excelGenerator.generateFloorReport(summaries);
 
     		String[] recipients = {
-    				"rpprem04@gmail.com",
-    				"haiiucedu@gmail.com"
+    				recipient1,
+    				recipient2
     		};
 
     		emailService.sendEmailWithAttachment(
