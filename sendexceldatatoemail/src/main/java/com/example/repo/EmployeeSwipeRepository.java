@@ -19,6 +19,7 @@ public interface EmployeeSwipeRepository extends JpaRepository<EmployeeSwipe, In
 		        e.employeeId,
 		        e.employeeName,
 		        e.designation,
+		        e.location,
 		        SUM(CASE WHEN UPPER(TRIM(e.floor)) = 'F1' THEN 1 ELSE 0 END),
 		        SUM(CASE WHEN UPPER(TRIM(e.floor)) = 'F2' THEN 1 ELSE 0 END),
 		        SUM(CASE WHEN UPPER(TRIM(e.floor)) = 'F3' THEN 1 ELSE 0 END),
@@ -29,8 +30,8 @@ public interface EmployeeSwipeRepository extends JpaRepository<EmployeeSwipe, In
 		        SUM(CASE WHEN UPPER(TRIM(e.floor)) = 'B' THEN 1 ELSE 0 END)
 		    )
 		    FROM EmployeeSwipe e
-		    WHERE e.swipeTime BETWEEN :start AND :end
-		    GROUP BY e.employeeId, e.employeeName, e.designation
+		    WHERE e.swipeTime BETWEEN :start AND :end AND e.location='MVL'
+		    GROUP BY e.employeeId, e.employeeName, e.designation, e.location
 		""")
 		List<EmployeeFloorSummary> getDailyFloorSummary(@Param("start") LocalDateTime start,
 		                                                @Param("end") LocalDateTime end);

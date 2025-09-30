@@ -39,7 +39,7 @@ public class ExcelReportGenerator {
 
         //  Header row
         int rowNum = 0;
-        String[] columns = {"S_No", "Employee ID", "Name", "Designation", "Floor F1", "Floor F2", "Floor F3", "Floor F4", "Floor F5","Floor F6","Floor F7","Floor B", "Total"};
+        String[] columns = {"S_No", "Employee ID", "Name", "Designation","location", "Floor F1", "Floor F2", "Floor F3", "Floor F4", "Floor F5","Floor F6","Floor F7","Floor B", "Total"};
         Row header = sheet.createRow(rowNum++);
         for (int i = 0; i < columns.length; i++) {
             XSSFCell cell = (XSSFCell) header.createCell(i);
@@ -63,7 +63,7 @@ public class ExcelReportGenerator {
             grandTotal =grandTotal + total;
 
             Object[] values = {
-                summary.getsNo(), summary.getEmployeeId(), summary.getEmployeeName(), summary.getDesignation(),
+                summary.getsNo(), summary.getEmployeeId(), summary.getEmployeeName(), summary.getDesignation(), summary.getlocation(),
                 summary.getFloorF1(), summary.getFloorF2(), summary.getFloorF3(),
                 summary.getFloorF4(), summary.getFloorF5(),summary.getFloorF6(),summary.getFloorF7(),summary.getFloorB(), total
             };

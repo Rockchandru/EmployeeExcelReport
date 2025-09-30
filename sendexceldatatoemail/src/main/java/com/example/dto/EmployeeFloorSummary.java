@@ -6,6 +6,7 @@ public class EmployeeFloorSummary {
     private String employeeId; // Changed from Long to String
     private String employeeName;
     private String designation;
+    private String location;
     private Long floorF1;
     private Long floorF2;
     private Long floorF3;
@@ -16,13 +17,14 @@ public class EmployeeFloorSummary {
     private Long floorB;
     private Long total;
 
-   	public EmployeeFloorSummary(Integer sNo, String employeeId, String employeeName, String designation, Long floorF1,
+   	public EmployeeFloorSummary(Integer sNo, String employeeId, String employeeName, String designation, String location, Long floorF1,
 			Long floorF2, Long floorF3, Long floorF4, Long floorF5, Long floorF6, Long floorF7, Long floorB) {
 		super();
 		this.sNo = sNo;
 		this.employeeId = employeeId;
 		this.employeeName = employeeName;
 		this.designation = designation;
+		this.location=location;
 		this.floorF1 = floorF1 != null ? floorF1: 0;
 		this.floorF2 = floorF2 != null ? floorF2: 0;
 		this.floorF3 = floorF3 != null ? floorF3: 0;
@@ -66,6 +68,15 @@ public class EmployeeFloorSummary {
 		this.designation = designation;
 	}
 
+	
+	public void setlocation(String location) {
+		this.location=location;
+	}
+	
+	public String getlocation() {
+		return location;
+	}
+	
 	public Long getFloorF1() {
 		return floorF1;
 	}
