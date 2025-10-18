@@ -1,5 +1,7 @@
 package com.example.pdfservice;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import com.example.dto.EmployeeFloorSummary;
 import com.itextpdf.text.*;
@@ -9,13 +11,19 @@ import com.itextpdf.text.pdf.draw.LineSeparator;
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
 @Component
 public class PdfReportGenerator {
 
-    // ✅ Centralized font size
+    private static final Logger logger = LoggerFactory.getLogger(PdfReportGenerator.class);
+
+    static {
+        logger.info("PdfReportGenerator initialized: ready to generate tower-wise PDF reports.");
+    }
+
     private static final int BASE_FONT_SIZE = 10;
 
     private static final Font TITLE_FONT = new Font(Font.FontFamily.HELVETICA, BASE_FONT_SIZE + 2, Font.BOLD);
@@ -29,6 +37,8 @@ public class PdfReportGenerator {
     };
 
     public byte[] generateTowerSummaryPdf(List<EmployeeFloorSummary> summaries, LocalDate date) throws Exception {
+        logger.info("Starting PDF generation for {} employee records on {}", summaries.size(), date);
+
         Document document = new Document(PageSize.A4.rotate(), 20, 20, 20, 20);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
@@ -36,16 +46,15 @@ public class PdfReportGenerator {
         String headerText = "RFID Punching Report – MVL on " + formattedDate;
 
         PdfWriter writer = PdfWriter.getInstance(document, out);
-        writer.setPageEvent(new PdfHeaderEvent(headerText, TITLE_FONT)); // ✅ Repeats heading on every page
+        writer.setPageEvent(new PdfHeaderEvent(headerText, TITLE_FONT));
 
         document.open();
 
         PdfPTable table = new PdfPTable(COLUMNS.length);
         table.setWidthPercentage(95);
-        table.setSpacingBefore(180f); // ✅ Balanced spacing below heading
+        table.setSpacingBefore(180f);
         table.setWidths(new float[]{1.2f, 2f, 3.5f, 3.5f, 1f, 1f, 1f, 1f, 1f, 2f});
 
-        // Header row
         for (String header : COLUMNS) {
             PdfPCell cell = new PdfPCell(new Phrase(header, HEADER_FONT));
             cell.setBackgroundColor(new BaseColor(220, 220, 220));
@@ -56,14 +65,16 @@ public class PdfReportGenerator {
             table.addCell(cell);
         }
 
-        table.setHeaderRows(1); // ✅ Repeat header on every page
+        table.setHeaderRows(1);
 
-        summaries.sort(Comparator.comparingLong(EmployeeFloorSummary::getTotal));
+        // ✅ Make a mutable copy before sorting
+        List<EmployeeFloorSummary> sortedSummaries = new ArrayList<>(summaries);
+        sortedSummaries.sort(Comparator.comparingLong(EmployeeFloorSummary::getTotal));
 
         int serial = 1;
         long totalPunches = 0;
 
-        for (EmployeeFloorSummary summary : summaries) {
+        for (EmployeeFloorSummary summary : sortedSummaries) {
             boolean isLowPunch = summary.getTotal() < 50;
 
             Object[] values = {
@@ -87,7 +98,7 @@ public class PdfReportGenerator {
                 Font font = new Font(Font.FontFamily.HELVETICA, BASE_FONT_SIZE);
                 if (isLowPunch) {
                     font.setStyle(Font.BOLD);
-                    font.setColor(new BaseColor(255, 102, 102)); // Red
+                    font.setColor(new BaseColor(255, 102, 102));
                 }
 
                 PdfPCell cell = new PdfPCell(new Phrase(text, font));
@@ -99,7 +110,6 @@ public class PdfReportGenerator {
             }
         }
 
-        // Final row: Overall Total
         PdfPCell labelCell = new PdfPCell(new Phrase("Total", TOTAL_FONT));
         labelCell.setColspan(9);
         labelCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
@@ -117,13 +127,11 @@ public class PdfReportGenerator {
 
         document.add(table);
 
-        // Separator line
         LineSeparator separator = new LineSeparator();
         separator.setOffset(-2);
         separator.setLineColor(BaseColor.DARK_GRAY);
         document.add(separator);
 
-        // Legend message
         Paragraph legend = new Paragraph();
         legend.setSpacingBefore(10f);
         legend.setAlignment(Element.ALIGN_CENTER);
@@ -140,12 +148,13 @@ public class PdfReportGenerator {
         legend.add(new Chunk(" represents average or normal punching activity.", LEGEND_FONT));
 
         document.add(legend);
-
         document.close();
+
+        logger.info("PDF generation completed successfully for {}", formattedDate);
         return out.toByteArray();
     }
 
-    private boolean isNumeric(String text) {
+    public boolean isNumeric(String text) {
         if (text == null || text.isEmpty()) return false;
         try {
             Double.parseDouble(text);

@@ -1,7 +1,7 @@
 package com.example.util;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-
+// default useing main table 
 @Entity
 @Table(name = "main")
 public class EmployeeSwipe {
@@ -31,7 +31,12 @@ public class EmployeeSwipe {
     @Column(name = "location") // ✅ Updated to match current DB column
     private String location;
 
-    @Column(name = "time_of_sheet_update")
+    @Column(name = "time_from_device")
+    private LocalDateTime timeFromDevice;
+
+    
+    
+	@Column(name = "time_of_sheet_update")
     private LocalDateTime swipeTime;
 
     // Getters and setters
@@ -107,4 +112,13 @@ public class EmployeeSwipe {
     public void setSwipeTime(LocalDateTime swipeTime) {
         this.swipeTime = swipeTime;
     }
+    public LocalDateTime getTimeFromDevice() {
+		return timeFromDevice;
+	}
+
+	public void setTimeFromDevice(LocalDateTime timeFromDevice) {
+		this.timeFromDevice = timeFromDevice;
+	}
+
+    
 }

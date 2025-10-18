@@ -9,5 +9,314 @@ public class Excelservices {
     }
 }LocalDate targetDate = LocalDate.of(2025, 9, 17); // Or use LocalDate.now()
 */
+/*
+ * <?xml version="1.0" encoding="UTF-8"?> <project
+ * xmlns="http://maven.apache.org/POM/4.0.0"
+ * xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:
+ * schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd"
+ * > <modelVersion>4.0.0</modelVersion>
+ * 
+ * <parent> <groupId>org.springframework.boot</groupId>
+ * <artifactId>spring-boot-starter-parent</artifactId> <version>3.5.5</version>
+ * <relativePath/> </parent>
+ * 
+ * <groupId>com.example</groupId> <artifactId>sendexceldatatoemail</artifactId>
+ * <version>0.0.1-SNAPSHOT</version> <name>sendexceldatatoemail</name>
+ * <description>Demo project for Spring Boot</description>
+ * 
+ * <properties> <java.version>17</java.version> </properties>
+ * 
+ * <dependencies> <dependency> <groupId>org.springframework.boot</groupId>
+ * <artifactId>spring-boot-starter</artifactId> </dependency>
+ * 
+ * <!-- Apache POI for Excel --> <dependency> <groupId>org.apache.poi</groupId>
+ * <artifactId>poi-ooxml</artifactId> <version>5.2.3</version> </dependency>
+ * 
+ * <!-- Spring Boot Starter Mail --> <dependency>
+ * <groupId>org.springframework.boot</groupId>
+ * <artifactId>spring-boot-starter-mail</artifactId> </dependency>
+ * 
+ * <!-- Spring Boot Starter Web --> <dependency>
+ * <groupId>org.springframework.boot</groupId>
+ * <artifactId>spring-boot-starter-web</artifactId> </dependency>
+ * 
+ * <!-- Apache POI core --> <dependency> <groupId>org.apache.poi</groupId>
+ * <artifactId>poi</artifactId> <version>5.2.3</version> </dependency>
+ * 
+ * <!-- iText PDF --> <dependency> <groupId>com.itextpdf</groupId>
+ * <artifactId>itextpdf</artifactId> <version>5.5.13.3</version> </dependency>
+ * 
+ * <!-- MySQL Driver --> <dependency> <groupId>mysql</groupId>
+ * <artifactId>mysql-connector-java</artifactId> <version>8.0.33</version>
+ * </dependency>
+ * 
+ * <!-- Spring Data JPA --> <dependency>
+ * <groupId>org.springframework.boot</groupId>
+ * <artifactId>spring-boot-starter-data-jpa</artifactId> </dependency>
+ * 
+ * <!-- Devtools --> <dependency> <groupId>org.springframework.boot</groupId>
+ * <artifactId>spring-boot-devtools</artifactId> <scope>runtime</scope>
+ * <optional>true</optional> </dependency>
+ * 
+ * <!-- H2 Database --> <dependency> <groupId>com.h2database</groupId>
+ * <artifactId>h2</artifactId> <scope>runtime</scope> </dependency>
+ * 
+ * <!-- Lombok --> <dependency> <groupId>org.projectlombok</groupId>
+ * <artifactId>lombok</artifactId> <optional>true</optional> </dependency>
+ * 
+ * <!-- Spring Boot Test --> <dependency>
+ * <groupId>org.springframework.boot</groupId>
+ * <artifactId>spring-boot-starter-test</artifactId> <scope>test</scope>
+ * </dependency> </dependencies>
+ * 
+ * <build> <finalName>rfid-report-email-service</finalName> <plugins> <plugin>
+ * <groupId>org.apache.maven.plugins</groupId>
+ * <artifactId>maven-compiler-plugin</artifactId> <configuration>
+ * <annotationProcessorPaths> <path> <groupId>org.projectlombok</groupId>
+ * <artifactId>lombok</artifactId> </path> </annotationProcessorPaths>
+ * </configuration> </plugin> <plugin>
+ * <groupId>org.springframework.boot</groupId>
+ * <artifactId>spring-boot-maven-plugin</artifactId> <configuration> <excludes>
+ * <exclude> <groupId>org.projectlombok</groupId>
+ * <artifactId>lombok</artifactId> </exclude> </excludes> </configuration>
+ * </plugin> </plugins> </build> </project>
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * <?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.5</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.example</groupId>
+    <artifactId>sendexceldatatoemail</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>sendexceldatatoemail</name>
+    <description>Demo project for Spring Boot</description>
+
+    <properties>
+        <java.version>17</java.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- Apache POI for Excel -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.3</version>
+        </dependency>
+
+        <!-- Spring Boot Starter Mail -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Starter Web -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Apache POI core -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi</artifactId>
+            <version>5.2.3</version>
+        </dependency>
+
+        <!-- iText PDF -->
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>itextpdf</artifactId>
+            <version>5.5.13.3</version>
+        </dependency>
+
+        <!-- MySQL Driver -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>8.0.33</version>
+        </dependency>
+
+        <!-- Spring Data JPA -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- Devtools -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- H2 Database -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Spring Boot Test -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>rfid-report-email-service</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	/*
+	 * @Value("${send.recipient4}") private String recipient4;
+	 * 
+	 * @Value("${send.recipient5}") private String recipient5;
+	 * 
+	 * 
+	 * @Value("${send.recipient6}") private String recipient6;
+	 */
+
+
+
+
+
+
+
+	
+			/*
+			 * LocalDateTime start =
+			 * LocalDateTime.now().minusDays(1).withHour(0).withMinute(0).withSecond(0).
+			 * withNano(0); LocalDateTime end = start.plusDays(1);
+			 * logger.debug("Report window: start={}, end={}", start, end); String location=
+			 * "MVL";
+			 */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
