@@ -1,150 +1,274 @@
 package com.example.emailscheduler;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
 
 import com.example.dto.EmployeeFloorSummary;
 import com.example.emailservice.Emailservices;
 import com.example.pdfservice.PdfReportGenerator;
 import com.example.repo.EmployeeSwipeRepository;
+import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Stream;
 
 @Component
 public class EmailScheduler {
 
     private static final Logger logger = LoggerFactory.getLogger(EmailScheduler.class);
 
-    static {
-        logger.info("EmailScheduler initialized: scheduled task for sending tower-wise PDF reports is active.");
+    private final Emailservices emailService;
+    private final EmployeeSwipeRepository repository;
+    private final PdfReportGenerator pdfReportGenerator;
+
+    private final List<String> recipients = new CopyOnWriteArrayList<>();
+    private volatile boolean cronEnabled = true;
+    private boolean testMode = false;
+
+    @Value("${send.recipient1}") private String r1;
+    @Value("${send.recipient2}") private String r2;
+    @Value("${send.recipient3}") private String r3;
+
+    public EmailScheduler(Emailservices emailService, EmployeeSwipeRepository repository, PdfReportGenerator pdfReportGenerator) {
+        this.emailService = emailService;
+        this.repository = repository;
+        this.pdfReportGenerator = pdfReportGenerator;
     }
 
-    @Autowired
-    private Emailservices emailService;
+    @PostConstruct
+    public void loadRecipients() {
+        recipients.addAll(Stream.of(r1, r2, r3)
+            .filter(email -> email != null && !email.isBlank())
+            .toList());
+        logger.info("📧 Recipients loaded: {}", String.join(", ", recipients));
+    }
 
-    @Autowired
-    private EmployeeSwipeRepository repository;
+    public void setTestMode(boolean testMode) {
+        this.testMode = testMode;
+    }
 
-    @Autowired
-    private PdfReportGenerator pdfReportGenerator;
+    public void setCronEnabled(boolean enabled) {
+        this.cronEnabled = enabled;
+    }
 
-    @Value("${send.recipient1}")
-    private String recipient1;
+    public boolean isCronEnabled() {
+        return cronEnabled;
+    }
 
-    @Value("${send.recipient2}")
-    private String recipient2;
+    public List<String> getRecipients() {
+        return recipients;
+    }
 
-    @Value("${send.recipient3}")
-    private String recipient3;
+    public void addRecipient(String email) {
+        if (email != null && email.matches(".+@.+\\..+")) {
+            recipients.add(email);
+            logger.info("✅ Recipient added: {}", email);
+        } else {
+            logger.warn("❌ Invalid recipient format: {}", email);
+        }
+    }
 
-    // ✅ Public setters for testing (no impact on production logic)
-    
+    public void removeRecipient(String email) {
+        recipients.remove(email);
+        logger.info("🗑️ Recipient removed: {}", email);
+    }
+
+    @Scheduled(cron = "${send.email.expression}")
+    public void sendPdfMail() {
+        if (!cronEnabled) {
+            logger.info("⏸️ Cron job is disabled. Skipping execution.");
+            return;
+        }
+
+        try {
+        	
+        	 LocalDateTime start = LocalDateTime.of(2025, 10, 13, 0, 0); LocalDateTime end
+			  = start.plusDays(1); logger.debug("Report window: start={}, end={}", start,
+			  end); String location = "MVL";
+			  logger.debug("Report window: start={}, end={}", start, end);
+			 
+
+			/*
+			 * LocalDateTime start =
+			 * LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
+			 * LocalDateTime end = start.plusDays(1); String location = "MVL";
+			 */
+            List<Object[]> rawResults = repository.getTowerWiseSummaryBetween(start, end, location);
+            if (rawResults == null || rawResults.isEmpty()) {
+                logger.warn("⚠️ No swipe data found for {} between {} and {}", location, start, end);
+                return;
+            }
+
+            Set<String> seenKeys = new HashSet<>();
+            List<EmployeeFloorSummary> summaries = rawResults.stream()
+                .map(row -> new EmployeeFloorSummary((Integer) row[0], (String) row[1], (String) row[2], (String) row[3],
+                                                     ((Number) row[4]).longValue(), ((Number) row[5]).longValue(),
+                                                     ((Number) row[6]).longValue(), ((Number) row[7]).longValue(),
+                                                     ((Number) row[8]).longValue()))
+                .filter(s -> seenKeys.add(s.getEmployeeId() + "-" + s.getDesignation()))
+                .toList();
+
+            if (summaries.isEmpty()) {
+                logger.warn("⚠️ No deduplicated summaries to report for {}", location);
+                return;
+            }
+
+            if (recipients.isEmpty()) {
+                logger.warn("⚠️ No recipients configured. Skipping email.");
+                return;
+            }
+
+            for (String email : recipients) {
+                if (email == null || !email.matches(".+@.+\\..+")) {
+                    logger.error("❌ Invalid email address: {}", email);
+                    if (testMode) throw new IllegalArgumentException("Invalid email: " + email);
+                    return;
+                }
+            }
+
+            byte[] report = pdfReportGenerator.generateTowerSummaryPdf(summaries, start.toLocalDate());
+
+            String formattedDate = start.toLocalDate().format(DateTimeFormatter.ofPattern("d MMM yyyy"));
+            String subject = "RFID Punching Report – " + location + " – " + formattedDate;
+            String body = "Dear Team,<br><br>" +
+                "Please find attached the RFID Punching Report for <strong>" + location + "</strong> on <strong>" + formattedDate + "</strong>.<br><br>" +
+                "Thank you,<br><span style='font-size:13px;'>Chandru</span>";
+
+            emailService.sendWithAttachment(recipients.toArray(new String[0]), subject, body, report);
+            logger.info("📤 Scheduled email sent successfully for {}", formattedDate);
+
+        } catch (Exception e) {
+            logger.error("❌ Error during scheduled email execution: {}", e.getMessage(), e);
+            if (testMode) throw new RuntimeException(e);
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+/*package com.example.emailscheduler;
+import com.example.dto.EmployeeFloorSummary;
+import com.example.emailservice.Emailservices;
+import com.example.pdfservice.PdfReportGenerator;
+import com.example.repo.EmployeeSwipeRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+@Component
+public class EmailScheduler {
+
+    private static final Logger logger = LoggerFactory.getLogger(EmailScheduler.class);
+
+    @Autowired private Emailservices emailService;
+    @Autowired private EmployeeSwipeRepository repository;
+    @Autowired private PdfReportGenerator pdfReportGenerator;
+
+    private final List<String> recipients = new CopyOnWriteArrayList<>();
+    private volatile boolean cronEnabled = true;
     private boolean testMode = false;
 
     public void setTestMode(boolean testMode) {
         this.testMode = testMode;
     }
-    public void setRecipient1(String recipient1) {
-        this.recipient1 = recipient1;
+
+    public void setCronEnabled(boolean enabled) {
+        this.cronEnabled = enabled;
     }
 
-    public void setRecipient2(String recipient2) {
-        this.recipient2 = recipient2;
+    public boolean isCronEnabled() {
+        return cronEnabled;
     }
 
-    public void setRecipient3(String recipient3) {
-        this.recipient3 = recipient3;
+    public List<String> getRecipients() {
+        return recipients;
+    }
+
+    public void addRecipient(String email) {
+        recipients.add(email);
+    }
+
+    public void removeRecipient(String email) {
+        recipients.remove(email);
     }
 
     @Scheduled(cron = "${send.email.expression}")
-    public void sendPdfMail() throws Exception {
-        logger.info("Scheduled task triggered: Preparing to send tower-wise PDF report email.");
+    public void sendPdfMail() {
+        if (!cronEnabled) {
+            logger.info("⏸️ Cron job is disabled. Skipping execution.");
+            return;
+        }
 
         try {
-        	
-			/*
-			 * LocalDateTime start =
-			 * LocalDateTime.now().minusDays(1).withHour(0).withMinute(0).withSecond(0).
-			 * withNano(0); LocalDateTime end = start.plusDays(1);
-			 * logger.debug("Report window: start={}, end={}", start, end); String location
-			 * = "MVL";
-			 */
-        	
-				
-				  LocalDateTime start = LocalDateTime.of(2025, 10, 12, 0, 0); LocalDateTime end
-				  = start.plusDays(1); logger.debug("Report window: start={}, end={}", start,
-				  end); String location = "Pallavaram";
-				  logger.debug("Report window: start={}, end={}", start, end);
-				 
-            logger.debug("Fetching swipe summary for location={} between {} and {}", location, start, end);
-            //List<EmployeeFloorSummary> summaries = repository.getTowerWiseSummaryBetween(start, end, location);
-            
+            LocalDateTime start = LocalDateTime.of(2025, 10, 13, 0, 0);
+            LocalDateTime end = start.plusDays(1);
+            String location = "MVL";
+
             List<Object[]> rawResults = repository.getTowerWiseSummaryBetween(start, end, location);
-
-            List<EmployeeFloorSummary> summaries = rawResults.stream().map(row -> {
-                return new EmployeeFloorSummary(
-                    (Integer) row[0],               // sNo
-                    (String) row[1],                // employeeId
-                    (String) row[2],                // employeeName
-                    (String) row[3],                // designation
-                    ((Number) row[4]).longValue(),  // towerA
-                    ((Number) row[5]).longValue(),  // towerB
-                    ((Number) row[6]).longValue(),  // towerC
-                    ((Number) row[7]).longValue(),  // towerD
-                    ((Number) row[8]).longValue()   // towerE
-                );
-            }).toList();
-
-
-            if (summaries.isEmpty()) {
-                logger.warn("No swipe data found for {} between {} and {}", location, start, end);
+            if (rawResults == null || rawResults.isEmpty()) {
+                logger.warn("⚠️ No swipe data found for {} between {} and {}", location, start, end);
                 return;
             }
 
-            logger.info("Generating PDF report for {} records.", summaries.size());
-            byte[] report = pdfReportGenerator.generateTowerSummaryPdf(summaries, start.toLocalDate());
+            Set<String> seenKeys = new HashSet<>();
+            List<EmployeeFloorSummary> summaries = rawResults.stream()
+                .map(row -> new EmployeeFloorSummary((Integer) row[0], (String) row[1], (String) row[2], (String) row[3],
+                                                     ((Number) row[4]).longValue(), ((Number) row[5]).longValue(),
+                                                     ((Number) row[6]).longValue(), ((Number) row[7]).longValue(),
+                                                     ((Number) row[8]).longValue()))
+                .filter(s -> seenKeys.add(s.getEmployeeId() + "-" + s.getDesignation()))
+                .toList();
 
-            String[] recipients = { recipient1, recipient2, recipient3 };
+            if (summaries.isEmpty()) {
+                logger.warn("⚠️ No deduplicated summaries to report for {}", location);
+                return;
+            }
+
+            if (recipients.isEmpty()) {
+                logger.warn("⚠️ No recipients configured. Skipping email.");
+                return;
+            }
 
             for (String email : recipients) {
                 if (email == null || !email.matches(".+@.+\\..+")) {
                     logger.error("❌ Invalid email address: {}", email);
-                    if (testMode) {
-                        throw new IllegalArgumentException("Invalid email: " + email);
-                    }
+                    if (testMode) throw new IllegalArgumentException("Invalid email: " + email);
                     return;
                 }
             }
 
-        
-            String formattedDate = start.toLocalDate().format(DateTimeFormatter.ofPattern("d MMMM yyyy"));
-            String subject = "RFID Punching Report – " + location + " Towers A–E – " + formattedDate;
-            String body = "Dear Team,<br>" +
-            	    "Please find attached the RFID Punching Report for <strong>" + location + "</strong>, covering Towers A to E for <strong>" + formattedDate + "</strong>.<br>" +
-            	    "This report provides a detailed overview of employee swipe activity segmented by tower, including individual punch counts and total summaries.<br><br>" +
-            	    "<strong>Note:</strong><br>" +
-            	    "• <span style='color:red; font-weight:bold;'>Red</span> – Low punching activity<br>" +
-            	    "• <span style='color:gray; font-weight:bold;'>Gray</span> – Normal or average punching activity<br><br>" +
-            	    "Thank you,<br>" +
-            	    "<span style='font-size:13px;'>Chandru</span>";
+            byte[] report = pdfReportGenerator.generateTowerSummaryPdf(summaries, start.toLocalDate());
 
+            String formattedDate = start.toLocalDate().format(DateTimeFormatter.ofPattern("d MMM yyyy"));
+            String subject = "RFID Punching Report – " + location + " – " + formattedDate;
+            String body = "Dear Team,<br><br>" +
+                "Please find attached the RFID Punching Report for <strong>" + location + "</strong> on <strong>" + formattedDate + "</strong>.<br><br>" +
+                "Thank you,<br><span style='font-size:13px;'>Chandru</span>";
 
-
-            logger.info("Sending email to recipients: {}", String.join(", ", recipients));
-            emailService.sendWithAttachment(recipients, subject, body, report);
-
+            emailService.sendWithAttachment(recipients.toArray(new String[0]), subject, body, report);
             logger.info("📤 Scheduled email sent successfully for {}", formattedDate);
-            
-        }catch (Exception e) {
-            logger.error("❌ Scheduler error occurred while sending report", e);
-            if (testMode) {
-                throw e; // ✅ Rethrow so test can catch it
-            }
+
+        } catch (Exception e) {
+            logger.error("❌ Error during scheduled email execution: {}", e.getMessage(), e);
         }
+    }
 }
-}
+*/

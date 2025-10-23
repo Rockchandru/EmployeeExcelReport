@@ -1,15 +1,21 @@
 package com.example.emailcontroller;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
 import com.example.dto.EmployeeFloorSummary;
 import com.example.emailservice.Emailservices;
 import com.example.pdfservice.PdfReportGenerator;
 import com.example.repo.EmployeeSwipeRepository;
+import com.example.emailscheduler.EmailScheduler;
+import com.example.backup.SiteBackupScheduler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.*;
+import org.springframework.web.bind.annotation.*;
+
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api")
@@ -17,97 +23,239 @@ public class Maincontroller {
 
     private static final Logger logger = LoggerFactory.getLogger(Maincontroller.class);
 
-    static {
-        logger.info("Maincontroller initialized: handling /api/send-tower-summary endpoint");
-    }
-
-    @Autowired
-    private Emailservices emailService;
-
-    @Autowired
-    private EmployeeSwipeRepository repository;
-
-    @Autowired
-    private PdfReportGenerator pdfReportGenerator;
+    @Autowired private Emailservices emailService;
+    @Autowired private EmployeeSwipeRepository repository;
+    @Autowired private PdfReportGenerator pdfReportGenerator;
+    @Autowired private EmailScheduler scheduler;
+    @Autowired private SiteBackupScheduler backupScheduler;
 
     @GetMapping("/send-tower-summary")
     public String sendTowerSummaryEmail() {
-        logger.info("Tower summary email endpoint triggered.");
-
         try {
-			
-			
-			  LocalDateTime start = LocalDateTime.of(2025, 10, 12, 0, 0); LocalDateTime end
-			  = start.plusDays(1); logger.debug("Report window: start={}, end={}", start,
-			  end); String location="Pallavaram";
-			  
-			 
-			
-			
-			/*
-			 * LocalDateTime start =
-			 * LocalDateTime.now().minusDays(1).withHour(0).withMinute(0).withSecond(0).
-			 * withNano(0); LocalDateTime end = start.plusDays(1);
-			 * logger.debug("Report window: start={}, end={}", start, end); String location
-			 * = "MVL";
-			 */
-			 
-
-            logger.debug("Fetching tower-wise summary for location={} between {} and {}", location, start, end);
-          //  List<EmployeeFloorSummary> summaries = repository.getTowerWiseSummaryBetween(start, end, location);
+            LocalDateTime start = LocalDateTime.of(2025, 10, 13, 0, 0);
+            LocalDateTime end = start.plusDays(1);
+            String location = "MVL";
 
             List<Object[]> rawResults = repository.getTowerWiseSummaryBetween(start, end, location);
 
-            List<EmployeeFloorSummary> summaries = rawResults.stream().map(row -> {
-                return new EmployeeFloorSummary(
-                    (Integer) row[0],               // sNo
-                    (String) row[1],                // employeeId
-                    (String) row[2],                // employeeName
-                    (String) row[3],                // designation
-                    ((Number) row[4]).longValue(),  // towerA
-                    ((Number) row[5]).longValue(),  // towerB
-                    ((Number) row[6]).longValue(),  // towerC
-                    ((Number) row[7]).longValue(),  // towerD
-                    ((Number) row[8]).longValue()   // towerE
-                );
-            }).toList();
+            Set<String> seenKeys = new HashSet<>();
+            List<EmployeeFloorSummary> summaries = rawResults.stream()
+                .map(row -> new EmployeeFloorSummary((Integer) row[0], (String) row[1], (String) row[2], (String) row[3],
+                                                     ((Number) row[4]).longValue(), ((Number) row[5]).longValue(),
+                                                     ((Number) row[6]).longValue(), ((Number) row[7]).longValue(),
+                                                     ((Number) row[8]).longValue()))
+                .filter(s -> seenKeys.add(s.getEmployeeId() + "-" + s.getDesignation()))
+                .toList();
+
             if (summaries.isEmpty()) {
-                logger.warn("No tower-wise data found for {} on {}", location, start.toLocalDate());
                 return "⚠️ No tower-wise data found for " + location + " on " + start.toLocalDate();
             }
 
-            logger.info("Generating PDF report for {} records.", summaries.size());
             byte[] report = pdfReportGenerator.generateTowerSummaryPdf(summaries, start.toLocalDate());
-			/*
-			 * "priyatharshini.m@athulyaseniorcare.com", "prasannag@athulyaseniorcare.com",
-			 * "senthil@athulyaseniorcare.com",
-			 */
-            String[] recipients = {
-                "rpprem04@gmail.com",
-               "haisenthil1975@gmail.com",
-                "mageshema1180@gmail.com"
-            };
+
+            List<String> recipients = scheduler.getRecipients();
+            for (String email : recipients) {
+                if (email == null || !email.matches(".+@.+\\..+")) {
+                    return "❌ Invalid email: " + email;
+                }
+            }
 
             String formattedDate = start.toLocalDate().format(DateTimeFormatter.ofPattern("d MMM yyyy"));
             String subject = "Tower-wise RFID Report – " + location + " – " + formattedDate;
             String body = "Dear Team,<br><br>" +
-            	    "Please find attached the RFID Punching Report for <strong>" + location + "</strong>, covering Towers A to E for <strong>" + formattedDate + "</strong>.<br><br>" +
-            	    "This report provides a detailed overview of employee swipe activity segmented by tower, including individual punch counts and total summaries.<br><br>" +
-            	    "<strong>Note:</strong><br>" +
-            	    "• <span style='color:red; font-weight:bold;'>Red</span> – Low punching activity<br>" +
-            	    "• <span style='color:gray; font-weight:bold;'>Gray</span> – Normal or average punching activity<br><br>" +
-            	    "Thank you,<br>" +
-            	    "<span style='font-size:13px;'>Chandru</span>";
+                "Please find attached the RFID Punching Report for <strong>" + location + "</strong> on <strong>" + formattedDate + "</strong>.<br><br>" +
+                "Thank you,<br><span style='font-size:13px;'>Chandru</span>";
 
-
-            logger.info("Sending email to recipients: {}", String.join(", ", recipients));
-            emailService.sendWithAttachment(recipients, subject, body, report);
-
-            logger.info("Tower-wise report for {} sent successfully.", formattedDate);
+            emailService.sendWithAttachment(recipients.toArray(new String[0]), subject, body, report);
             return "✅ Tower-wise report for " + formattedDate + " sent successfully!";
         } catch (Exception e) {
-            logger.error("Failed to generate or send tower-wise report", e);
+            logger.error("Failed to generate or send report", e);
             return "❌ Failed to generate or send report: " + e.getMessage();
         }
     }
+    // ✅ 1. Toggle cron job
+    @PostMapping("/cron/toggle")
+    public ResponseEntity<String> toggleCron(@RequestParam boolean enable) {
+        scheduler.setCronEnabled(enable);
+        return ResponseEntity.ok("Cron job " + (enable ? "enabled" : "disabled"));
+    }
+
+    // ✅ 2. Add recipient
+    @PostMapping("/recipients/add")
+    public ResponseEntity<String> addRecipient(@RequestParam String email) {
+        scheduler.addRecipient(email);
+        return ResponseEntity.ok("Added recipient: " + email);
+    }
+
+    // ✅ 3. Remove recipient
+    @PostMapping("/recipients/remove")
+    public ResponseEntity<String> removeRecipient(@RequestParam String email) {
+        scheduler.removeRecipient(email);
+        return ResponseEntity.ok("Removed recipient: " + email);
+    }
+    @GetMapping("/recipients")
+    public ResponseEntity<List<String>> listRecipients() {
+        return ResponseEntity.ok(scheduler.getRecipients());
+    }
+
+    
+
+    // ✅ 4. Retrieve records by date
+    @GetMapping("/summary")
+    public ResponseEntity<List<EmployeeFloorSummary>> getSummary(@RequestParam String date) {
+        LocalDateTime start = LocalDate.parse(date).atStartOfDay();
+        LocalDateTime end = start.plusDays(1);
+        List<Object[]> raw = repository.getTowerWiseSummaryBetween(start, end, "MVL");
+
+        Set<String> seenKeys = new HashSet<>();
+        List<EmployeeFloorSummary> summaries = raw.stream()
+            .map(row -> new EmployeeFloorSummary((Integer) row[0], (String) row[1], (String) row[2], (String) row[3],
+                                                 ((Number) row[4]).longValue(), ((Number) row[5]).longValue(),
+                                                 ((Number) row[6]).longValue(), ((Number) row[7]).longValue(),
+                                                 ((Number) row[8]).longValue()))
+            .filter(s -> seenKeys.add(s.getEmployeeId() + "-" + s.getDesignation()))
+            .toList();
+
+        return ResponseEntity.ok(summaries);
+    }
+
+    // ✅ 5. Generate CSV report without cron
+    @GetMapping("/summary/csv")
+    public ResponseEntity<byte[]> getCsvReport(@RequestParam String date) {
+        LocalDateTime start = LocalDate.parse(date).atStartOfDay();
+        LocalDateTime end = start.plusDays(1);
+        List<Object[]> raw = repository.getTowerWiseSummaryBetween(start, end, "MVL");
+
+        Set<String> seenKeys = new HashSet<>();
+        List<EmployeeFloorSummary> summaries = raw.stream()
+            .map(row -> new EmployeeFloorSummary((Integer) row[0], (String) row[1], (String) row[2], (String) row[3],
+                                                 ((Number) row[4]).longValue(), ((Number) row[5]).longValue(),
+                                                 ((Number) row[6]).longValue(), ((Number) row[7]).longValue(),
+                                                 ((Number) row[8]).longValue()))
+            .filter(s -> seenKeys.add(s.getEmployeeId() + "-" + s.getDesignation()))
+            .toList();
+
+        StringBuilder sb = new StringBuilder("S.No,Employee ID,Name,Designation,A,B,C,D,E,Total\n");
+        int i = 1;
+        for (EmployeeFloorSummary s : summaries) {
+            sb.append(i++).append(",").append(s.getEmployeeId()).append(",").append(s.getEmployeeName()).append(",")
+              .append(s.getDesignation()).append(",").append(s.getTowerA()).append(",").append(s.getTowerB()).append(",")
+              .append(s.getTowerC()).append(",").append(s.getTowerD()).append(",").append(s.getTowerE()).append(",")
+              .append(s.getTotal()).append("\n");
+        }
+
+        return ResponseEntity.ok()
+            .header("Content-Disposition", "attachment; filename=report.csv")
+            .contentType(MediaType.TEXT_PLAIN)
+            .body(sb.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    // ✅ 6. Trigger site backup manually
+    @PostMapping("/backup/trigger")
+    public ResponseEntity<String> triggerBackup() {
+        String result = backupScheduler.triggerBackupManually();
+        return ResponseEntity.ok(result);
+    }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+    @GetMapping("/backup/status")
+    public ResponseEntity<String> getBackupStatus() {
+        return ResponseEntity.ok("🕒 Last backup: " + backupScheduler.getLastBackupTime());
+    }
+
+    @PostMapping("/backup/trigger")
+    public ResponseEntity<String> triggerBackup() {
+        String result = backupScheduler.triggerBackupManually();
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/cron/toggle")
+    public ResponseEntity<String> toggleCron(@RequestParam boolean enable) {
+        scheduler.setCronEnabled(enable);
+        return ResponseEntity.ok("Cron job " + (enable ? "enabled" : "disabled"));
+    }
+
+    @PostMapping("/recipients/add")
+    public ResponseEntity<String> addRecipient(@RequestParam String email) {
+        scheduler.addRecipient(email);
+        return ResponseEntity.ok("Added: " + email);
+    }
+
+    @PostMapping("/recipients/remove")
+    public ResponseEntity<String> removeRecipient(@RequestParam String email) {
+        scheduler.removeRecipient(email);
+        return ResponseEntity.ok("Removed: " + email);
+    }
+
+    @GetMapping("/recipients")
+    public ResponseEntity<List<String>> listRecipients() {
+        return ResponseEntity.ok(scheduler.getRecipients());
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<List<EmployeeFloorSummary>> getSummary(@RequestParam String date) {
+        LocalDateTime start = LocalDate.parse(date).atStartOfDay();
+        LocalDateTime end = start.plusDays(1);
+        List<Object[]> raw = repository.getTowerWiseSummaryBetween(start, end, "MVL");
+
+        List<EmployeeFloorSummary> summaries = raw.stream().map(row -> {
+            EmployeeFloorSummary s = new EmployeeFloorSummary((Integer) row[0], (String) row[1], (String) row[2], (String) row[3],
+                                                              ((Number) row[4]).longValue(), ((Number) row[5]).longValue(),
+                                                              ((Number) row[6]).longValue(), ((Number) row[7]).longValue(),
+                                                              ((Number) row[8]).longValue());
+            s.setTotal(s.getTowerA() + s.getTowerB() + s.getTowerC() + s.getTowerD() + s.getTowerE());
+            return s;
+        }).toList();
+
+        return ResponseEntity.ok(summaries);
+    }
+
+    @GetMapping("/summary/csv")
+    public ResponseEntity<byte[]> getCsvReport(@RequestParam String date) {
+        LocalDateTime start = LocalDate.parse(date).atStartOfDay();
+        LocalDateTime end = start.plusDays(1);
+        List<Object[]> raw = repository.getTowerWiseSummaryBetween(start, end, "MVL");
+
+        List<EmployeeFloorSummary> summaries = raw.stream().map(row -> {
+            EmployeeFloorSummary s = new EmployeeFloorSummary((Integer) row[0], (String) row[1], (String) row[2], (String) row[3],
+                                                              ((Number) row[4]).longValue(), ((Number) row[5]).longValue(),
+                                                              ((Number) row[6]).longValue(), ((Number) row[7]).longValue(),
+                                                              ((Number) row[8]).longValue());
+            s.setTotal(s.getTowerA() + s.getTowerB() + s.getTowerC() + s.getTowerD() + s.getTowerE());
+            return s;
+        }).toList();
+
+        StringBuilder sb = new StringBuilder("S.No,Employee ID,Name,Designation,A,B,C,D,E,Total\n");
+        int i = 1;
+        for (EmployeeFloorSummary s : summaries) {
+            sb.append(i++).append(",").append(s.getEmployeeId()).append(",").append(s.getEmployeeName()).append(",")
+              .append(s.getDesignation()).append(",").append(s.getTowerA()).append(",").append(s.getTowerB()).append(",")
+              .append(s.getTowerC()).append(",").append(s.getTowerD()).append(",").append(s.getTowerE()).append(",")
+              .append(s.getTotal()).append("\n");
+        }
+
+        return ResponseEntity.ok()
+            .header("Content-Disposition", "attachment; filename=report.csv")
+            .contentType(MediaType.TEXT_PLAIN)
+            .body(sb.toString().getBytes(StandardCharsets.UTF_8));
+    }
+}
+*/
