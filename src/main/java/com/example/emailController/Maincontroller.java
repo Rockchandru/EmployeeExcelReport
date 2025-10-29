@@ -1,4 +1,5 @@
 package com.example.emailcontroller;
+import com.example.dto.EmployeeFloorSummary;
 
 import com.example.dto.EmployeeFloorSummary;
 import com.example.emailservice.Emailservices;
@@ -35,9 +36,16 @@ public class Maincontroller {
     public String sendTowerSummaryEmail() {
         logger.info("📨 [START] /send-tower-summary triggered");
         try {
-            LocalDateTime start = LocalDateTime.of(2025, 10, 28, 0, 0);
-            LocalDateTime end = start.plusDays(1);
-            String location = "MVL";
+			/*
+			 * LocalDateTime start = LocalDateTime.of(2025, 10, 28, 0, 0); LocalDateTime end
+			 * = start.plusDays(1); String location = "MVL";
+			 */
+        	LocalDateTime start = LocalDateTime.now()
+        		    .minusDays(1)
+        		    .withHour(0).withMinute(0).withSecond(0).withNano(0);
+        		LocalDateTime end = start.plusDays(1);
+        		String location = "MVL";
+        		logger.debug("📅 Report window: start={}, end={}", start, end);
 
             List<Object[]> rawResults = repository.getTowerWiseSummaryBetween(start, end, location);
             logger.info("📊 Retrieved {} raw records for location {}", rawResults.size(), location);

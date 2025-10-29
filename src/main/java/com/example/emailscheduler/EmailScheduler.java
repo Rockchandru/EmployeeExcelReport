@@ -36,11 +36,11 @@ public class EmailScheduler {
     @Value("${send.recipient.cc1}") private String cc1;
     @Value("${send.recipient.cc2}") private String cc2;
     @Value("${send.recipient.cc3}") private String cc3;
-    //@Value("${send.recipient.cc4}") private String cc4;
-    //@Value("${send.recipient.cc5}") private String cc5;
-    //@Value("${send.recipient.cc6}") private String cc6;
-    //@Value("${send.recipient.cc7}") private String cc7;
-   // @Value("${send.recipient.cc8}") private String cc8;
+    @Value("${send.recipient.cc4}") private String cc4;
+    @Value("${send.recipient.cc5}") private String cc5;
+    @Value("${send.recipient.cc6}") private String cc6;
+    @Value("${send.recipient.cc7}") private String cc7;
+   @Value("${send.recipient.cc8}") private String cc8;
 
     public EmailScheduler(Emailservices emailService, EmployeeSwipeRepository repository,
                           PdfReportGenerator pdfReportGenerator) {
@@ -52,7 +52,7 @@ public class EmailScheduler {
     @PostConstruct
     public void loadRecipients() {
         recipients.addAll(Stream.of(r1).filter(email -> email != null && !email.isBlank()).toList());
-        ccRecipients.addAll(Stream.of(cc1, cc2, cc3)
+        ccRecipients.addAll(Stream.of(cc1, cc2, cc3,cc4, cc5, cc6, cc7, cc8)
             .filter(email -> email != null && !email.isBlank())
             .toList());
         logger.info("📧 TO Recipients loaded: {}", String.join(", ", recipients));
@@ -127,10 +127,19 @@ public class EmailScheduler {
         }
 
         try {
-            LocalDateTime start = LocalDateTime.of(2025, 10, 28, 0, 0);
-            LocalDateTime end = start.plusDays(1);
-            String location = "MVL";
-
+			/*
+			 * LocalDateTime start = LocalDateTime.of(2025, 10, 28, 0, 0); LocalDateTime end
+			 * = start.plusDays(1); String location = "MVL";
+			 */
+        	
+        	LocalDateTime start = LocalDateTime.now()
+        		    .minusDays(1)
+        		    .withHour(0).withMinute(0).withSecond(0).withNano(0);
+        		LocalDateTime end = start.plusDays(1);
+        		String location = "MVL";
+        		logger.debug("📅 Report window: start={}, end={}", start, end);
+        		
+        		
             List<Object[]> rawResults = repository.getTowerWiseSummaryBetween(start, end, location);
             if (rawResults == null || rawResults.isEmpty()) {
                 logger.warn("⚠️ No swipe data found for {} between {} and {}", location, start, end);
