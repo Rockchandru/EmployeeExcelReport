@@ -305,10 +305,20 @@ public class Excelservices {
 
 
 
+/*
+			 * LocalDateTime start = LocalDateTime.of(2025, 10, 14, 0, 0); LocalDateTime end
+			 * = start.plusDays(1); String location = "MVL";
+			 * logger.debug("Report window: start={}, end={}", start, end);
+			 */
 
 
 
-
+/*
+			 * LocalDateTime start =
+			 * LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
+			 * LocalDateTime end = start.plusDays(1); String location = "MVL";
+			 */
+            //logger.debug("Report window: start={}, end={}", start, end);
 
 
 

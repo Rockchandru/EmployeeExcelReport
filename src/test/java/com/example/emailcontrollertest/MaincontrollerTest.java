@@ -1,3 +1,315 @@
+package com.example.emailcontrollertest;
+
+import com.example.backup.SiteBackupScheduler;
+import com.example.dto.EmployeeFloorSummary;
+import com.example.emailcontroller.Maincontroller;
+import com.example.emailservice.Emailservices;
+import com.example.emailscheduler.EmailScheduler;
+import com.example.pdfservice.PdfReportGenerator;
+import com.example.repo.EmployeeSwipeRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.*;
+import org.springframework.http.ResponseEntity;
+
+import java.util.*;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+class MaincontrollerTest {
+
+    @InjectMocks
+    private Maincontroller controller;
+
+    @Mock private Emailservices emailService;
+    @Mock private EmployeeSwipeRepository repository;
+    @Mock private PdfReportGenerator pdfReportGenerator;
+    @Mock private EmailScheduler scheduler;
+    @Mock private SiteBackupScheduler backupScheduler;
+
+    @BeforeEach
+    void setup() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    @DisplayName("✅ /send-tower-summary - success")
+    void testSendTowerSummaryEmail_success() throws Exception {
+        List<Object[]> rawResults = new ArrayList<>();
+        rawResults.add(new Object[]{1, "E001", "John", "Manager", 1L, 2L, 3L, 4L, 5L});
+
+        when(repository.getTowerWiseSummaryBetween(any(), any(), eq("MVL"))).thenReturn(rawResults);
+        when(pdfReportGenerator.generateTowerSummaryPdf(anyList(), any())).thenReturn(new byte[]{1});
+        when(scheduler.getRecipients()).thenReturn(List.of("test@example.com"));
+
+        String result = controller.sendTowerSummaryEmail();
+        assertTrue(result.contains("✅"));
+        verify(emailService).sendWithAttachment(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("⚠️ /send-tower-summary - no data")
+    void testSendTowerSummaryEmail_noData() {
+        when(repository.getTowerWiseSummaryBetween(any(), any(), eq("MVL"))).thenReturn(Collections.emptyList());
+
+        String result = controller.sendTowerSummaryEmail();
+        assertTrue(result.contains("⚠️"));
+    }
+
+    @Test
+    @DisplayName("❌ /send-tower-summary - invalid email")
+    void testSendTowerSummaryEmail_invalidEmail() throws Exception {
+        List<Object[]> rawResults = new ArrayList<>();
+        rawResults.add(new Object[]{1, "E001", "John", "Manager", 1L, 2L, 3L, 4L, 5L});
+
+        when(repository.getTowerWiseSummaryBetween(any(), any(), eq("MVL"))).thenReturn(rawResults);
+        when(pdfReportGenerator.generateTowerSummaryPdf(anyList(), any())).thenReturn(new byte[]{1});
+        when(scheduler.getRecipients()).thenReturn(List.of("invalid-email"));
+
+        String result = controller.sendTowerSummaryEmail();
+        assertTrue(result.contains("❌"));
+        verify(emailService, never()).sendWithAttachment(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("✅ /cron/toggle")
+    void testToggleCron() {
+        ResponseEntity<String> response = controller.toggleCron(true);
+        assertEquals("Cron job enabled", response.getBody());
+        verify(scheduler).setCronEnabled(true);
+    }
+
+    @Test
+    @DisplayName("✅ /recipients/add")
+    void testAddRecipient() {
+        ResponseEntity<String> response = controller.addRecipient("test@example.com");
+        assertEquals("Added recipient: test@example.com", response.getBody());
+        verify(scheduler).addRecipient("test@example.com");
+    }
+
+    @Test
+    @DisplayName("✅ /recipients/remove")
+    void testRemoveRecipient() {
+        ResponseEntity<String> response = controller.removeRecipient("test@example.com");
+        assertEquals("Removed recipient: test@example.com", response.getBody());
+        verify(scheduler).removeRecipient("test@example.com");
+    }
+
+    @Test
+    @DisplayName("✅ /recipients - list")
+    void testListRecipients() {
+        when(scheduler.getRecipients()).thenReturn(List.of("a@example.com", "b@example.com"));
+
+        ResponseEntity<List<String>> response = controller.listRecipients();
+        assertEquals(2, response.getBody().size());
+        assertTrue(response.getBody().contains("a@example.com"));
+    }
+
+    @Test
+    @DisplayName("✅ /summary - returns parsed DTO")
+    void testGetSummary() {
+        List<Object[]> rawResults = new ArrayList<>();
+        rawResults.add(new Object[]{1, "E001", "John", "Manager", 1L, 2L, 3L, 4L, 5L});
+
+        when(repository.getTowerWiseSummaryBetween(any(), any(), eq("MVL"))).thenReturn(rawResults);
+
+        ResponseEntity<List<EmployeeFloorSummary>> response = controller.getSummary("2025-10-13");
+        assertFalse(response.getBody().isEmpty());
+        assertEquals("E001", response.getBody().get(0).getEmployeeId());
+    }
+
+    @Test
+    @DisplayName("✅ /summary/csv - returns CSV bytes")
+    void testGetCsvReport() {
+        List<Object[]> rawResults = new ArrayList<>();
+        rawResults.add(new Object[]{1, "E001", "John", "Manager", 1L, 2L, 3L, 4L, 5L});
+
+        when(repository.getTowerWiseSummaryBetween(any(), any(), eq("MVL"))).thenReturn(rawResults);
+
+        ResponseEntity<byte[]> response = controller.getCsvReport("2025-10-13");
+        String csv = new String(response.getBody());
+        assertTrue(csv.contains("Employee ID"));
+        assertTrue(csv.contains("John"));
+    }
+
+    @Test
+    @DisplayName("✅ /backup/trigger")
+    void testTriggerBackup() {
+        when(backupScheduler.triggerBackupManually()).thenReturn("✅ Backup completed");
+
+        ResponseEntity<String> response = controller.triggerBackup();
+        assertEquals("✅ Backup completed", response.getBody());
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+/*package com.example.emailcontrollertest;
+
+import com.example.backup.SiteBackupScheduler;
+import com.example.dto.EmployeeFloorSummary;
+import com.example.emailcontroller.Maincontroller;
+import com.example.emailservice.Emailservices;
+import com.example.emailscheduler.EmailScheduler;
+import com.example.pdfservice.PdfReportGenerator;
+import com.example.repo.EmployeeSwipeRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.*;
+import org.springframework.http.ResponseEntity;
+
+import java.util.*;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+class MaincontrollerTest {
+
+    @InjectMocks
+    private Maincontroller controller;
+
+    @Mock private Emailservices emailService;
+    @Mock private EmployeeSwipeRepository repository;
+    @Mock private PdfReportGenerator pdfReportGenerator;
+    @Mock private EmailScheduler scheduler;
+    @Mock private SiteBackupScheduler backupScheduler;
+
+    @BeforeEach
+    void setup() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    @DisplayName("✅ /send-tower-summary - success")
+    void testSendTowerSummaryEmail_success() throws Exception {
+        List<Object[]> rawResults = new ArrayList<>();
+        rawResults.add(new Object[]{1, "E001", "John", "Manager", 1L, 2L, 3L, 4L, 5L});
+
+        when(repository.getTowerWiseSummaryBetween(any(), any(), eq("MVL"))).thenReturn(rawResults);
+        when(pdfReportGenerator.generateTowerSummaryPdf(anyList(), any())).thenReturn(new byte[]{1});
+        when(scheduler.getRecipients()).thenReturn(List.of("test@example.com"));
+
+        String result = controller.sendTowerSummaryEmail();
+        assertTrue(result.contains("✅"));
+        verify(emailService).sendWithAttachment(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("⚠️ /send-tower-summary - no data")
+    void testSendTowerSummaryEmail_noData() {
+        when(repository.getTowerWiseSummaryBetween(any(), any(), eq("MVL"))).thenReturn(Collections.emptyList());
+
+        String result = controller.sendTowerSummaryEmail();
+        assertTrue(result.contains("⚠️"));
+    }
+
+    @Test
+    @DisplayName("❌ /send-tower-summary - invalid email")
+    void testSendTowerSummaryEmail_invalidEmail() throws Exception {
+        List<Object[]> rawResults = new ArrayList<>();
+        rawResults.add(new Object[]{1, "E001", "John", "Manager", 1L, 2L, 3L, 4L, 5L});
+
+        when(repository.getTowerWiseSummaryBetween(any(), any(), eq("MVL"))).thenReturn(rawResults);
+        when(pdfReportGenerator.generateTowerSummaryPdf(anyList(), any())).thenReturn(new byte[]{1});
+        when(scheduler.getRecipients()).thenReturn(List.of("invalid-email"));
+
+        String result = controller.sendTowerSummaryEmail();
+        assertTrue(result.contains("❌"));
+    }
+
+    @Test
+    @DisplayName("✅ /cron/toggle")
+    void testToggleCron() {
+        ResponseEntity<String> response = controller.toggleCron(true);
+        assertEquals("Cron job enabled", response.getBody());
+        verify(scheduler).setCronEnabled(true);
+    }
+
+    @Test
+    @DisplayName("✅ /recipients/add")
+    void testAddRecipient() {
+        ResponseEntity<String> response = controller.addRecipient("test@example.com");
+        assertEquals("Added recipient: test@example.com", response.getBody());
+        verify(scheduler).addRecipient("test@example.com");
+    }
+
+    @Test
+    @DisplayName("✅ /recipients/remove")
+    void testRemoveRecipient() {
+        ResponseEntity<String> response = controller.removeRecipient("test@example.com");
+        assertEquals("Removed recipient: test@example.com", response.getBody());
+        verify(scheduler).removeRecipient("test@example.com");
+    }
+
+    @Test
+    @DisplayName("✅ /recipients - list")
+    void testListRecipients() {
+        when(scheduler.getRecipients()).thenReturn(List.of("a@example.com", "b@example.com"));
+
+        ResponseEntity<List<String>> response = controller.listRecipients();
+        assertEquals(2, response.getBody().size());
+        assertTrue(response.getBody().contains("a@example.com"));
+    }
+
+    @Test
+    @DisplayName("✅ /summary - returns parsed DTO")
+    void testGetSummary() {
+        List<Object[]> rawResults = new ArrayList<>();
+        rawResults.add(new Object[]{1, "E001", "John", "Manager", 1L, 2L, 3L, 4L, 5L});
+
+        when(repository.getTowerWiseSummaryBetween(any(), any(), eq("MVL"))).thenReturn(rawResults);
+
+        ResponseEntity<List<EmployeeFloorSummary>> response = controller.getSummary("2025-10-13");
+        assertFalse(response.getBody().isEmpty());
+        assertEquals("E001", response.getBody().get(0).getEmployeeId());
+    }
+
+    @Test
+    @DisplayName("✅ /summary/csv - returns CSV bytes")
+    void testGetCsvReport() {
+        List<Object[]> rawResults = new ArrayList<>();
+        rawResults.add(new Object[]{1, "E001", "John", "Manager", 1L, 2L, 3L, 4L, 5L});
+
+        when(repository.getTowerWiseSummaryBetween(any(), any(), eq("MVL"))).thenReturn(rawResults);
+
+        ResponseEntity<byte[]> response = controller.getCsvReport("2025-10-13");
+        String csv = new String(response.getBody());
+        assertTrue(csv.contains("Employee ID"));
+        assertTrue(csv.contains("John"));
+    }
+
+    @Test
+    @DisplayName("✅ /backup/trigger")
+    void testTriggerBackup() {
+        when(backupScheduler.triggerBackupManually()).thenReturn("✅ Backup completed");
+
+        ResponseEntity<String> response = controller.triggerBackup();
+        assertEquals("✅ Backup completed", response.getBody());
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
 /*package com.example.sendexceldatatoemail;
 
 import com.example.backup.SiteBackupScheduler;

@@ -18,8 +18,8 @@ public class ReportJobSummary {
     private String name;
     private LocalDateTime timestamp;
     private String status;
-    private Integer durationSeconds;     // New field
-    private String errorMessage;         // New field
+    private Integer durationSeconds;     
+    private String errorMessage;        
 
     // Getters and Setters
 

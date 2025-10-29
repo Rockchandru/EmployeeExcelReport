@@ -1,3 +1,223 @@
+package com.example.emailschedulertest;
+
+import com.example.emailscheduler.EmailScheduler;
+import com.example.emailservice.Emailservices;
+import com.example.pdfservice.PdfReportGenerator;
+import com.example.repo.EmployeeSwipeRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.*;
+
+import java.util.*;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+class EmailSchedulerTest {
+
+    @InjectMocks
+    private EmailScheduler scheduler;
+
+    @Mock private Emailservices emailService;
+    @Mock private EmployeeSwipeRepository repository;
+    @Mock private PdfReportGenerator pdfReportGenerator;
+
+    @BeforeEach
+    void setup() {
+        MockitoAnnotations.openMocks(this);
+        scheduler.setTestMode(true);
+        scheduler.setCronEnabled(true);
+        scheduler.addRecipient("valid@example.com");
+    }
+
+    @Test
+    @DisplayName("✅ Add and remove recipient")
+    void testAddAndRemoveRecipient() {
+        scheduler.addRecipient("user@example.com");
+        assertTrue(scheduler.getRecipients().contains("user@example.com"));
+
+        scheduler.removeRecipient("user@example.com");
+        assertFalse(scheduler.getRecipients().contains("user@example.com"));
+    }
+
+    @Test
+    @DisplayName("✅ sendPdfMail - valid data and recipient")
+    void testSendPdfMail_validData_shouldSend() throws Exception {
+        List<Object[]> rawResults = new ArrayList<>();
+        rawResults.add(new Object[]{1, "E001", "John", "Manager", 1L, 2L, 3L, 4L, 5L});
+
+        when(repository.getTowerWiseSummaryBetween(any(), any(), eq("MVL"))).thenReturn(rawResults);
+        when(pdfReportGenerator.generateTowerSummaryPdf(anyList(), any())).thenReturn(new byte[]{1});
+
+        scheduler.sendPdfMail();
+        verify(emailService).sendWithAttachment(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("⚠️ sendPdfMail - no recipients")
+    void testSendPdfMail_noRecipients_shouldSkip() {
+        scheduler.getRecipients().clear();
+        scheduler.sendPdfMail();
+        verify(emailService, never()).sendWithAttachment(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("❌ sendPdfMail - invalid email should skip")
+    void testSendPdfMail_invalidEmail_shouldSkip() {
+        scheduler.getRecipients().clear();
+        scheduler.addRecipient("invalid-email");
+
+        scheduler.sendPdfMail(); // should not throw
+        verify(emailService, never()).sendWithAttachment(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("⚠️ sendPdfMail - cron disabled")
+    void testSendPdfMail_cronDisabled_shouldSkip() {
+        scheduler.setCronEnabled(false);
+        scheduler.sendPdfMail();
+        verify(emailService, never()).sendWithAttachment(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("⚠️ sendPdfMail - empty data")
+    void testSendPdfMail_emptyData_shouldSkip() {
+        when(repository.getTowerWiseSummaryBetween(any(), any(), eq("MVL"))).thenReturn(Collections.emptyList());
+        scheduler.sendPdfMail();
+        verify(emailService, never()).sendWithAttachment(any(), any(), any(), any(), any());
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*package com.example.emailschedulertest;
+
+import com.example.emailscheduler.EmailScheduler;
+import com.example.emailservice.Emailservices;
+import com.example.pdfservice.PdfReportGenerator;
+import com.example.repo.EmployeeSwipeRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.*;
+
+import java.util.*;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+class EmailSchedulerTest {
+
+    @InjectMocks
+    private EmailScheduler scheduler;
+
+    @Mock private Emailservices emailService;
+    @Mock private EmployeeSwipeRepository repository;
+    @Mock private PdfReportGenerator pdfReportGenerator;
+
+    @BeforeEach
+    void setup() {
+        MockitoAnnotations.openMocks(this);
+        scheduler.setTestMode(true);
+        scheduler.setCronEnabled(true);
+        scheduler.addRecipient("valid@example.com");
+    }
+
+    @Test
+    @DisplayName("✅ Add and remove recipient")
+    void testAddAndRemoveRecipient() {
+        scheduler.addRecipient("user@example.com");
+        assertTrue(scheduler.getRecipients().contains("user@example.com"));
+
+        scheduler.removeRecipient("user@example.com");
+        assertFalse(scheduler.getRecipients().contains("user@example.com"));
+    }
+
+    @Test
+    @DisplayName("✅ sendPdfMail - valid data and recipient")
+    void testSendPdfMail_validData_shouldSend() throws Exception {
+        List<Object[]> rawResults = new ArrayList<>();
+        rawResults.add(new Object[]{1, "E001", "John", "Manager", 1L, 2L, 3L, 4L, 5L});
+
+        when(repository.getTowerWiseSummaryBetween(any(), any(), eq("MVL"))).thenReturn(rawResults);
+        when(pdfReportGenerator.generateTowerSummaryPdf(anyList(), any())).thenReturn(new byte[]{1});
+
+        scheduler.sendPdfMail();
+        verify(emailService).sendWithAttachment(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("⚠️ sendPdfMail - no recipients")
+    void testSendPdfMail_noRecipients_shouldSkip() {
+        scheduler.getRecipients().clear();
+        scheduler.sendPdfMail();
+        verify(emailService, never()).sendWithAttachment(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("❌ sendPdfMail - invalid email should skip")
+    void testSendPdfMail_invalidEmail_shouldSkip() {
+        scheduler.getRecipients().clear();
+        scheduler.addRecipient("invalid-email");
+
+        scheduler.sendPdfMail(); // should not throw
+        verify(emailService, never()).sendWithAttachment(any(), any(), any(), any());
+    }
+
+
+    @Test
+    @DisplayName("⚠️ sendPdfMail - cron disabled")
+    void testSendPdfMail_cronDisabled_shouldSkip() {
+        scheduler.setCronEnabled(false);
+        scheduler.sendPdfMail();
+        verify(emailService, never()).sendWithAttachment(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("⚠️ sendPdfMail - empty data")
+    void testSendPdfMail_emptyData_shouldSkip() {
+        when(repository.getTowerWiseSummaryBetween(any(), any(), eq("MVL"))).thenReturn(Collections.emptyList());
+        scheduler.sendPdfMail();
+        verify(emailService, never()).sendWithAttachment(any(), any(), any(), any());
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /*package com.example.sendexceldatatoemail;
 
 import com.example.dto.EmployeeFloorSummary;

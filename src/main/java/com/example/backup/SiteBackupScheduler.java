@@ -18,9 +18,9 @@ public class SiteBackupScheduler {
     private static final Logger logger = LoggerFactory.getLogger(SiteBackupScheduler.class);
 
     // ✅ Update these paths to match your Windows environment
-    private final String sourceDir = "C:\\file backups";
-    private final String backupDir = "C:\\temp";
-    private final String remoteDir = "G:\\automatic backupdric";
+    private  String sourceDir = "C:\\file backups";
+    private  String backupDir = "C:\\temp";
+    private  String remoteDir = "G:\\automatic backupdric";
 
     private boolean testMode = false;
     private String lastBackupTime = "Never";
