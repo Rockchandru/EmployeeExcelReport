@@ -35,20 +35,9 @@ public class Maincontroller {
     public String sendTowerSummaryEmail() {
         logger.info("📨 [START] /send-tower-summary triggered");
         try {
-            LocalDateTime start = LocalDateTime.of(2025, 10, 15, 0, 0);
+            LocalDateTime start = LocalDateTime.of(2025, 10, 28, 0, 0);
             LocalDateTime end = start.plusDays(1);
             String location = "MVL";
-            
-            /*
-			 * LocalDateTime start =
-			 * LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
-			 * LocalDateTime end = start.plusDays(1); String location = "MVL";
-			 */
-            //logger.debug("Report window: start={}, end={}", start, end);
-
-            
-            
-            
 
             List<Object[]> rawResults = repository.getTowerWiseSummaryBetween(start, end, location);
             logger.info("📊 Retrieved {} raw records for location {}", rawResults.size(), location);
@@ -70,29 +59,23 @@ public class Maincontroller {
             byte[] report = pdfReportGenerator.generateTowerSummaryPdf(summaries, start.toLocalDate());
             logger.info("📄 PDF report generated");
 
-            List<String> recipients = scheduler.getRecipients();
-            for (String email : recipients) {
-                if (email == null || !email.matches(".+@.+\\..+")) {
-                    logger.error("❌ Invalid email format: {}", email);
-                    return "❌ Invalid email: " + email;
-                }
-            }
-
             String formattedDate = start.toLocalDate().format(DateTimeFormatter.ofPattern("d MMM yyyy"));
             String subject = "Tower-wise RFID Report – " + location + " – " + formattedDate;
             String body = "Dear Team,<br>" +
-    	            "Please find the RFID Punching Report for <strong>" + location + "</strong>, covering Towers A to E for <strong>" + formattedDate + "</strong>.<br>" +
-    	            "This report provides a detailed overview of employee swipe activity segmented by tower.<br><br>" +
-    	            "<strong>Note:</strong><br>" +
-    	            "• <span style='color:red; font-weight:bold;'>Red</span> – Low punching activity<br>" +
-    	            "• <span style='color:gray; font-weight:bold;'>Gray</span> – Normal or average punching activity<br><br>" +
-    	            "Thank you,<br><span style='font-size:13px;'>Chandru</span>";
-                                                                                   // unchanged for brevity
+                "Please find the RFID Punching Report for <strong>" + location + "</strong>, covering Towers A to E for <strong>" + formattedDate + "</strong>.<br>" +
+                "This report provides a detailed overview of employee swipe activity segmented by tower.<br><br>" +
+                "<strong>Note:</strong><br>" +
+                "• <span style='color:red; font-weight:bold;'>Red</span> – Low punching activity<br>" +
+                "• <span style='color:gray; font-weight:bold;'>Gray</span> – Normal or average punching activity<br><br>" +
+                "Thank you,<br><span style='font-size:13px;'>Chandru</span>";
 
-            String encodedPdf = Base64.getEncoder().encodeToString(report);
-            emailService.sendWithAttachment(recipients.toArray(new String[0]), subject, body, encodedPdf, "Tower_Report_" + formattedDate + ".pdf");
+            String[] to = scheduler.getRecipients().toArray(new String[0]);
+            String[] cc = scheduler.getCcRecipients().toArray(new String[0]);
 
-            logger.info("✅ Email sent successfully to {} recipients", recipients.size());
+            emailService.sendWithAttachment(to, cc, subject, body, report, "Tower_Report_" + formattedDate + ".pdf");
+
+
+            logger.info("✅ Email sent successfully to TO and CC recipients");
             return "✅ Tower-wise report for " + formattedDate + " sent successfully!";
         } catch (Exception e) {
             logger.error("❌ Failed to generate or send report", e);
@@ -106,6 +89,8 @@ public class Maincontroller {
         scheduler.setCronEnabled(enable);
         return ResponseEntity.ok("Cron job " + (enable ? "enabled" : "disabled"));
     }
+
+    // ──────────────── TO Recipients ────────────────
 
     @PostMapping("/recipients/add")
     public ResponseEntity<String> addRecipient(@RequestParam String email) {
@@ -130,8 +115,37 @@ public class Maincontroller {
     @DeleteMapping("/recipients/clear")
     public ResponseEntity<String> clearAllRecipients() {
         logger.info("🧹 /recipients/clear called");
-        scheduler.getRecipients().clear();
-        return ResponseEntity.ok("✅ All recipients have been removed.");
+        scheduler.clearRecipients();
+        return ResponseEntity.ok("✅ All TO recipients have been removed.");
+    }
+
+    // ──────────────── CC Recipients ────────────────
+
+    @PostMapping("/cc/add")
+    public ResponseEntity<String> addCc(@RequestParam String email) {
+        logger.info("➕ /cc/add called with email={}", email);
+        scheduler.addCc(email);
+        return ResponseEntity.ok("Added CC recipient: " + email);
+    }
+
+    @PostMapping("/cc/remove")
+    public ResponseEntity<String> removeCc(@RequestParam String email) {
+        logger.info("➖ /cc/remove called with email={}", email);
+        scheduler.removeCc(email);
+        return ResponseEntity.ok("Removed CC recipient: " + email);
+    }
+
+    @GetMapping("/cc")
+    public ResponseEntity<List<String>> listCcRecipients() {
+        logger.info("📋 /cc called");
+        return ResponseEntity.ok(scheduler.getCcRecipients());
+    }
+
+    @DeleteMapping("/cc/clear")
+    public ResponseEntity<String> clearAllCcRecipients() {
+        logger.info("🧹 /cc/clear called");
+        scheduler.clearCcRecipients();
+        return ResponseEntity.ok("✅ All CC recipients have been removed.");
     }
 
     @GetMapping("/summary")

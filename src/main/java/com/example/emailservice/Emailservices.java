@@ -38,6 +38,138 @@ public class Emailservices {
         return email != null && email.matches(".+@.+\\..+");
     }
 
+    public void sendWithAttachment(String[] to, String[] cc, String subject, String body, byte[] pdfBytes, String filename) {
+        try {
+            for (String email : to) {
+                if (!isValidEmail(email)) {
+                    logger.warn("⚠️ Invalid TO email address: {}", email);
+                    if (!testMode) throw new IllegalArgumentException("Invalid TO email: " + email);
+                    return;
+                }
+            }
+            for (String email : cc) {
+                if (!isValidEmail(email)) {
+                    logger.warn("⚠️ Invalid CC email address: {}", email);
+                    if (!testMode) throw new IllegalArgumentException("Invalid CC email: " + email);
+                    return;
+                }
+            }
+
+            String encodedPdf = Base64.getEncoder().encodeToString(pdfBytes);
+
+            logger.info("📤 Sending email TO: {} | CC: {} | Subject: {}", Arrays.toString(to), Arrays.toString(cc), subject);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+            headers.set("Authorization", "Zoho-enczapikey " + apiKey);
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("from", Map.of("address", "info@tamsen.in", "name", "Tamsen Support Team"));
+
+            List<Map<String, Object>> toList = new ArrayList<>();
+            for (String email : to) {
+                toList.add(Map.of("email_address", Map.of("address", email)));
+            }
+            payload.put("to", toList);
+
+            List<Map<String, Object>> ccList = new ArrayList<>();
+            for (String email : cc) {
+                ccList.add(Map.of("email_address", Map.of("address", email)));
+            }
+            payload.put("cc", ccList);
+
+            payload.put("subject", subject);
+            payload.put("htmlbody", body);
+
+            Map<String, Object> attachment = new HashMap<>();
+            attachment.put("name", filename);
+            attachment.put("mime_type", "application/pdf");
+            attachment.put("content", encodedPdf);
+            payload.put("attachments", new Object[]{attachment});
+
+            ObjectMapper mapper = new ObjectMapper();
+            String rawJson = mapper.writeValueAsString(payload);
+            logger.debug("📤 Raw JSON with attachment: {}", rawJson);
+
+            HttpEntity<String> request = new HttpEntity<>(rawJson, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(apiUrl, request, String.class);
+
+            logger.info("✅ ZeptoMail response: {}", response.getBody());
+
+        } catch (HttpClientErrorException.Forbidden e) {
+            String responseBody = e.getResponseBodyAsString();
+            if (responseBody.contains("Trial mail sending limit exceeded") || responseBody.contains("Per day limit exhausted")) {
+                logger.error("🚫 ZeptoMail trial quota exceeded. You’ve hit the 110-email/day limit. Try again tomorrow.");
+            } else {
+                logger.error("❌ Forbidden error: {}", responseBody);
+            }
+            if (!testMode) throw new RuntimeException("ZeptoMail quota exceeded or access denied.");
+        } catch (HttpStatusCodeException e) {
+            logger.error("❌ Email sending failed: {} : {}", e.getStatusCode(), e.getResponseBodyAsString());
+            if (!testMode) throw new RuntimeException(e);
+        } catch (Exception e) {
+            logger.error("❌ Unexpected error: {}", e.getMessage(), e);
+            if (!testMode) throw new RuntimeException(e);
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*package com.example.emailservice;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.*;
+
+@Service
+public class Emailservices {
+
+    private static final Logger logger = LoggerFactory.getLogger(Emailservices.class);
+
+    private final RestTemplate restTemplate;
+    private boolean testMode = false;
+
+    @Value("${zeptomail.api.key}")
+    private String apiKey;
+
+    @Value("${zeptomail.api.url}")
+    private String apiUrl;
+
+    public Emailservices(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
+
+    public void setTestMode(boolean testMode) {
+        this.testMode = testMode;
+    }
+
+    public boolean isValidEmail(String email) {
+        return email != null && email.matches(".+@.+\\..+");
+    }
+
     public void sendWithAttachment(String[] recipients, String subject, String body, String encodedPdf, String filename) {
         try {
             for (String email : recipients) {
@@ -106,7 +238,7 @@ public class Emailservices {
     }
 }
 
-
+*/
 
 
 

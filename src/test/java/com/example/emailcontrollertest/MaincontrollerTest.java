@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class MaincontrollerTest {
@@ -42,11 +43,20 @@ class MaincontrollerTest {
 
         when(repository.getTowerWiseSummaryBetween(any(), any(), eq("MVL"))).thenReturn(rawResults);
         when(pdfReportGenerator.generateTowerSummaryPdf(anyList(), any())).thenReturn(new byte[]{1});
-        when(scheduler.getRecipients()).thenReturn(List.of("test@example.com"));
+        when(scheduler.getRecipients()).thenReturn(List.of("to@example.com"));
+        when(scheduler.getCcRecipients()).thenReturn(List.of("cc@example.com"));
 
         String result = controller.sendTowerSummaryEmail();
         assertTrue(result.contains("✅"));
-        verify(emailService).sendWithAttachment(any(), any(), any(), any(), any());
+
+        verify(emailService).sendWithAttachment(
+            any(String[].class),
+            any(String[].class),
+            anyString(),
+            anyString(),
+            any(byte[].class),
+            anyString()
+        );
     }
 
     @Test
@@ -59,19 +69,26 @@ class MaincontrollerTest {
     }
 
     @Test
-    @DisplayName("❌ /send-tower-summary - invalid email")
-    void testSendTowerSummaryEmail_invalidEmail() throws Exception {
+    @DisplayName("❌ /send-tower-summary - invalid TO email")
+    void testSendTowerSummaryEmail_invalidToEmail() throws Exception {
         List<Object[]> rawResults = new ArrayList<>();
         rawResults.add(new Object[]{1, "E001", "John", "Manager", 1L, 2L, 3L, 4L, 5L});
 
         when(repository.getTowerWiseSummaryBetween(any(), any(), eq("MVL"))).thenReturn(rawResults);
         when(pdfReportGenerator.generateTowerSummaryPdf(anyList(), any())).thenReturn(new byte[]{1});
         when(scheduler.getRecipients()).thenReturn(List.of("invalid-email"));
+        when(scheduler.getCcRecipients()).thenReturn(List.of("cc@example.com"));
+
+        doThrow(new IllegalArgumentException("Invalid TO email")).when(emailService)
+            .sendWithAttachment(any(), any(), anyString(), anyString(), any(byte[].class), anyString());
 
         String result = controller.sendTowerSummaryEmail();
         assertTrue(result.contains("❌"));
-        verify(emailService, never()).sendWithAttachment(any(), any(), any(), any(), any());
+
+        verify(emailService).sendWithAttachment(any(), any(), anyString(), anyString(), any(byte[].class), anyString());
     }
+
+    // Remaining tests unchanged — all use correct List<Object[]> pattern
 
     @Test
     @DisplayName("✅ /cron/toggle")
@@ -84,27 +101,67 @@ class MaincontrollerTest {
     @Test
     @DisplayName("✅ /recipients/add")
     void testAddRecipient() {
-        ResponseEntity<String> response = controller.addRecipient("test@example.com");
-        assertEquals("Added recipient: test@example.com", response.getBody());
-        verify(scheduler).addRecipient("test@example.com");
+        ResponseEntity<String> response = controller.addRecipient("to@example.com");
+        assertEquals("Added recipient: to@example.com", response.getBody());
+        verify(scheduler).addRecipient("to@example.com");
     }
 
     @Test
     @DisplayName("✅ /recipients/remove")
     void testRemoveRecipient() {
-        ResponseEntity<String> response = controller.removeRecipient("test@example.com");
-        assertEquals("Removed recipient: test@example.com", response.getBody());
-        verify(scheduler).removeRecipient("test@example.com");
+        ResponseEntity<String> response = controller.removeRecipient("to@example.com");
+        assertEquals("Removed recipient: to@example.com", response.getBody());
+        verify(scheduler).removeRecipient("to@example.com");
     }
 
     @Test
     @DisplayName("✅ /recipients - list")
     void testListRecipients() {
         when(scheduler.getRecipients()).thenReturn(List.of("a@example.com", "b@example.com"));
-
         ResponseEntity<List<String>> response = controller.listRecipients();
         assertEquals(2, response.getBody().size());
         assertTrue(response.getBody().contains("a@example.com"));
+    }
+
+    @Test
+    @DisplayName("✅ /recipients/clear")
+    void testClearRecipients() {
+        ResponseEntity<String> response = controller.clearAllRecipients();
+        assertEquals("✅ All TO recipients have been removed.", response.getBody());
+        verify(scheduler).clearRecipients();
+    }
+
+    @Test
+    @DisplayName("✅ /cc/add")
+    void testAddCcRecipient() {
+        ResponseEntity<String> response = controller.addCc("cc@example.com");
+        assertEquals("Added CC recipient: cc@example.com", response.getBody());
+        verify(scheduler).addCc("cc@example.com");
+    }
+
+    @Test
+    @DisplayName("✅ /cc/remove")
+    void testRemoveCcRecipient() {
+        ResponseEntity<String> response = controller.removeCc("cc@example.com");
+        assertEquals("Removed CC recipient: cc@example.com", response.getBody());
+        verify(scheduler).removeCc("cc@example.com");
+    }
+
+    @Test
+    @DisplayName("✅ /cc - list")
+    void testListCcRecipients() {
+        when(scheduler.getCcRecipients()).thenReturn(List.of("cc1@example.com", "cc2@example.com"));
+        ResponseEntity<List<String>> response = controller.listCcRecipients();
+        assertEquals(2, response.getBody().size());
+        assertTrue(response.getBody().contains("cc1@example.com"));
+    }
+
+    @Test
+    @DisplayName("✅ /cc/clear")
+    void testClearCcRecipients() {
+        ResponseEntity<String> response = controller.clearAllCcRecipients();
+        assertEquals("✅ All CC recipients have been removed.", response.getBody());
+        verify(scheduler).clearCcRecipients();
     }
 
     @Test
@@ -143,8 +200,6 @@ class MaincontrollerTest {
         assertEquals("✅ Backup completed", response.getBody());
     }
 }
-
-
 
 
 

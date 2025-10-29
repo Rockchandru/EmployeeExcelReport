@@ -22,7 +22,7 @@ public class ReportJobService {
     @Autowired
     private ReportJobSummaryRepository repository;
 
-    // Track job start times for duration calculation
+ 
     private Map<String, LocalDateTime> jobStartTimes = new HashMap<>();
 
     public void markJobStarted(String jobName) {

@@ -29,10 +29,11 @@ class EmailSchedulerTest {
         scheduler.setTestMode(true);
         scheduler.setCronEnabled(true);
         scheduler.addRecipient("valid@example.com");
+        scheduler.addCc("cc@example.com");
     }
 
     @Test
-    @DisplayName("✅ Add and remove recipient")
+    @DisplayName("✅ Add and remove TO recipient")
     void testAddAndRemoveRecipient() {
         scheduler.addRecipient("user@example.com");
         assertTrue(scheduler.getRecipients().contains("user@example.com"));
@@ -42,7 +43,17 @@ class EmailSchedulerTest {
     }
 
     @Test
-    @DisplayName("✅ sendPdfMail - valid data and recipient")
+    @DisplayName("✅ Add and remove CC recipient")
+    void testAddAndRemoveCcRecipient() {
+        scheduler.addCc("ccuser@example.com");
+        assertTrue(scheduler.getCcRecipients().contains("ccuser@example.com"));
+
+        scheduler.removeCc("ccuser@example.com");
+        assertFalse(scheduler.getCcRecipients().contains("ccuser@example.com"));
+    }
+
+    @Test
+    @DisplayName("✅ sendPdfMail - valid data and recipients")
     void testSendPdfMail_validData_shouldSend() throws Exception {
         List<Object[]> rawResults = new ArrayList<>();
         rawResults.add(new Object[]{1, "E001", "John", "Manager", 1L, 2L, 3L, 4L, 5L});
@@ -50,26 +61,37 @@ class EmailSchedulerTest {
         when(repository.getTowerWiseSummaryBetween(any(), any(), eq("MVL"))).thenReturn(rawResults);
         when(pdfReportGenerator.generateTowerSummaryPdf(anyList(), any())).thenReturn(new byte[]{1});
 
+        scheduler.addRecipient("to@example.com");
+        scheduler.addCc("cc@example.com");
+
         scheduler.sendPdfMail();
-        verify(emailService).sendWithAttachment(any(), any(), any(), any(), any());
+
+        verify(emailService).sendWithAttachment(
+            any(String[].class),
+            any(String[].class),
+            anyString(),
+            anyString(),
+            any(byte[].class),
+            anyString()
+        );
     }
 
     @Test
-    @DisplayName("⚠️ sendPdfMail - no recipients")
+    @DisplayName("⚠️ sendPdfMail - no TO recipients")
     void testSendPdfMail_noRecipients_shouldSkip() {
         scheduler.getRecipients().clear();
         scheduler.sendPdfMail();
-        verify(emailService, never()).sendWithAttachment(any(), any(), any(), any(), any());
+        verify(emailService, never()).sendWithAttachment(any(), any(), any(), any(), any(), any());
     }
 
     @Test
-    @DisplayName("❌ sendPdfMail - invalid email should skip")
+    @DisplayName("❌ sendPdfMail - invalid TO email should skip")
     void testSendPdfMail_invalidEmail_shouldSkip() {
         scheduler.getRecipients().clear();
         scheduler.addRecipient("invalid-email");
 
         scheduler.sendPdfMail(); // should not throw
-        verify(emailService, never()).sendWithAttachment(any(), any(), any(), any(), any());
+        verify(emailService, never()).sendWithAttachment(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -77,7 +99,7 @@ class EmailSchedulerTest {
     void testSendPdfMail_cronDisabled_shouldSkip() {
         scheduler.setCronEnabled(false);
         scheduler.sendPdfMail();
-        verify(emailService, never()).sendWithAttachment(any(), any(), any(), any(), any());
+        verify(emailService, never()).sendWithAttachment(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -85,7 +107,7 @@ class EmailSchedulerTest {
     void testSendPdfMail_emptyData_shouldSkip() {
         when(repository.getTowerWiseSummaryBetween(any(), any(), eq("MVL"))).thenReturn(Collections.emptyList());
         scheduler.sendPdfMail();
-        verify(emailService, never()).sendWithAttachment(any(), any(), any(), any(), any());
+        verify(emailService, never()).sendWithAttachment(any(), any(), any(), any(), any(), any());
     }
 }
 

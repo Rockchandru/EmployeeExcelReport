@@ -11,8 +11,6 @@ import org.springframework.web.client.RestTemplate;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import java.util.Base64;
-
 class EmailservicesTest {
 
     @InjectMocks
@@ -26,7 +24,6 @@ class EmailservicesTest {
         MockitoAnnotations.openMocks(this);
         emailservices.setTestMode(true);
 
-        // Inject required ZeptoMail fields
         ReflectionTestUtils.setField(emailservices, "apiUrl", "https://api.zeptomail.com/v1.1/email");
         ReflectionTestUtils.setField(emailservices, "apiKey", "dummy-api-key");
     }
@@ -43,62 +40,76 @@ class EmailservicesTest {
 
     @Test
     void testSendWithAttachment_valid_shouldSend() {
-        String[] recipients = {"user@example.com"};
+        String[] to = {"user@example.com"};
+        String[] cc = {"cc@example.com"};
+        byte[] pdfBytes = "dummy-pdf-content".getBytes();
         String subject = "Test Subject";
         String body = "Test Body";
-        String encodedPdf = Base64.getEncoder().encodeToString("dummy-pdf-content".getBytes());
         String filename = "report.pdf";
 
         ResponseEntity<String> mockResponse = new ResponseEntity<>("Mail Sent Successfully", HttpStatus.OK);
         when(restTemplate.postForEntity(anyString(), any(), eq(String.class))).thenReturn(mockResponse);
 
         assertDoesNotThrow(() ->
-            emailservices.sendWithAttachment(recipients, subject, body, encodedPdf, filename)
+            emailservices.sendWithAttachment(to, cc, subject, body, pdfBytes, filename)
         );
 
         verify(restTemplate).postForEntity(anyString(), any(), eq(String.class));
     }
 
     @Test
-    void testSendWithAttachment_invalidEmail_shouldSkipInTestMode() {
-        String[] recipients = {"invalid-email"};
-        String encodedPdf = Base64.getEncoder().encodeToString("dummy-pdf-content".getBytes());
+    void testSendWithAttachment_invalidToEmail_shouldSkipInTestMode() {
+        String[] to = {"invalid-email"};
+        String[] cc = {"cc@example.com"};
+        byte[] pdfBytes = "dummy-pdf-content".getBytes();
 
-        emailservices.sendWithAttachment(recipients, "Subject", "Body", encodedPdf, "report.pdf");
+        emailservices.sendWithAttachment(to, cc, "Subject", "Body", pdfBytes, "report.pdf");
+
+        verify(restTemplate, never()).postForEntity(anyString(), any(), eq(String.class));
+    }
+
+    @Test
+    void testSendWithAttachment_invalidCcEmail_shouldSkipInTestMode() {
+        String[] to = {"user@example.com"};
+        String[] cc = {"invalid-email"};
+        byte[] pdfBytes = "dummy-pdf-content".getBytes();
+
+        emailservices.sendWithAttachment(to, cc, "Subject", "Body", pdfBytes, "report.pdf");
 
         verify(restTemplate, never()).postForEntity(anyString(), any(), eq(String.class));
     }
 
     @Test
     void testSendWithAttachment_multipleRecipients_shouldSendOnce() {
-        String[] recipients = {"user1@example.com", "user2@example.com"};
+        String[] to = {"user1@example.com", "user2@example.com"};
+        String[] cc = {"cc1@example.com", "cc2@example.com"};
+        byte[] pdfBytes = "dummy-pdf-content".getBytes();
         String subject = "Test Subject";
         String body = "Test Body";
-        String encodedPdf = Base64.getEncoder().encodeToString("dummy-pdf-content".getBytes());
         String filename = "report.pdf";
 
         ResponseEntity<String> mockResponse = new ResponseEntity<>("Mail Sent Successfully", HttpStatus.OK);
         when(restTemplate.postForEntity(anyString(), any(), eq(String.class))).thenReturn(mockResponse);
 
-        emailservices.sendWithAttachment(recipients, subject, body, encodedPdf, filename);
+        emailservices.sendWithAttachment(to, cc, subject, body, pdfBytes, filename);
 
         verify(restTemplate, times(1)).postForEntity(anyString(), any(), eq(String.class));
     }
 
     @Test
     void testSendWithAttachment_runtimeException_shouldBeCaughtInTestMode() {
-        String[] recipients = {"user@example.com"};
-        String encodedPdf = Base64.getEncoder().encodeToString("dummy-pdf-content".getBytes());
+        String[] to = {"user@example.com"};
+        String[] cc = {"cc@example.com"};
+        byte[] pdfBytes = "dummy-pdf-content".getBytes();
 
         when(restTemplate.postForEntity(anyString(), any(), eq(String.class)))
             .thenThrow(new RuntimeException("Simulated failure"));
 
         assertDoesNotThrow(() ->
-            emailservices.sendWithAttachment(recipients, "Subject", "Body", encodedPdf, "report.pdf")
+            emailservices.sendWithAttachment(to, cc, "Subject", "Body", pdfBytes, "report.pdf")
         );
     }
 }
-
 
 
 
